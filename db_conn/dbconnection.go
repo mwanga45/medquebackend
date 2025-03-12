@@ -37,8 +37,8 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(doctor_tb); err != nil {
 		log.Fatalf("failed to create new table %v", err)
 	}
-	patient_tb := `CREATE TABLE IF NOT EXISTS users (
-		user_id INT PRIMARY KEY AUTO_INCREMENT,
+	patient_tb := `CREATE TABLE IF NOT EXISTS Patients (
+		user_id  SERIAL  PRIMARY KEY ,
 		full_name VARCHAR(150) NOT NULL,
 		home_address VARCHAR(150),
 		email VARCHAR(100) UNIQUE NOT NULL,

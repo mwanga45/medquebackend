@@ -1,13 +1,21 @@
 package main
 
 import (
-	"medquemod/db_conn"
-	"log"
-	"net/http"
 	"fmt"
+	"log"
+	"medquemod/db_conn"
+	"net/http"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 func main() {
+
+	r := mux.NewRouter
+
+	r.HandleFunc("/register", handlers.RegisterHandler).Methods("POST")
+
 
 // call function connectionpool
 const conn_string = "user=postgres dbname=medque password=lynx host=localhost sslmode=disable"
@@ -19,9 +27,15 @@ defer func(){
 		log.Fatalf("there is no connection to database")
 	}
 }()
+// configure Cors middleware
+cors := handlers.CORS(
+	handlers.AllowedOrigins([]string {"*"}),
+	handlers.AllowedMethods([]string {"POST", "PUT","GET", "DELETE"}),
+	handlers.AllowedHeaders([]string {"content-type", "Authorization"}),
+)
 
 	fmt.Println("server listen and serve port 8800...")
-	err:= http.ListenAndServe(":8800",nil)
+	err:= http.ListenAndServe(":8800",cors())
 	if err != nil{
 		log.Fatalln("Failed to create server ")
 	}
