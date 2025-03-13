@@ -5,7 +5,7 @@ import (
 	"log"
 	"medquemod/db_conn"
 	"net/http"
-
+     "medquemod/handleauthentic"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -13,9 +13,8 @@ import (
 func main() {
 
 	r := mux.NewRouter
-
-
-
+	// r.HandleFunc("/register",authentic.Reg_authentic)
+	r.HandleFunc("/register",authentic.Handler())
 
 // call function connectionpool
 const conn_string = "user=postgres dbname=medque password=lynx host=localhost sslmode=disable"

@@ -36,10 +36,6 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		return
 	}
 
-	// _, err := handlerconn.Db.Exec("SELECT  email, phone_number FROM Patients WHERE phone_number ",req.phone_num && req.email_address); err !=nil{
-	// 	http.Error(w, "already exist phone number or number  ",http.StatusBadRequest)
-	// 	return
-	// }
 	query := "SELECT   email, phone_number FROM Patients WHERE email = $1 OR $2"
    var emaiexist , phoneexist string
 	err := handlerconn.Db.QueryRow(query,req.email_address,req.phone_num).Scan(&emaiexist, &phoneexist)
@@ -64,10 +60,8 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 	res := response{Success: true, Message: "successfuly registered"}
 
 	w.Header().Set("content-type", "Application/json")
-	json.NewEncoder().Encode(res)
+	json.NewEncoder(w).Encode(res)
 
 
 
-}
-func Reg_authentic()  {
 }
