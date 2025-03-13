@@ -14,7 +14,7 @@ func main() {
 
 	r := mux.NewRouter
 
-	r.HandleFunc("/register", handlers.RegisterHandler).Methods("POST")
+
 
 
 // call function connectionpool
@@ -35,7 +35,7 @@ cors := handlers.CORS(
 )
 
 	fmt.Println("server listen and serve port 8800...")
-	err:= http.ListenAndServe(":8800",cors())
+	err:= http.ListenAndServe(":8800",cors(r))
 	if err != nil{
 		log.Fatalln("Failed to create server ")
 	}
