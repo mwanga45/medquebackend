@@ -16,7 +16,7 @@ type reg_request struct{
 }
 type response struct{
 	Success bool `json:"success"`
-	Message string `json:"messsage, omitempty"`
+	Message string `json:"messsage,omitempty"`
 	
 }
 func Handler(w http.ResponseWriter, r* http.Request ){
