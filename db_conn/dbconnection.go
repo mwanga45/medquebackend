@@ -37,6 +37,7 @@ func Connectionpool(databasesourceName string) error {
     email VARCHAR(100),
     availability VARCHAR(50), 
     room_number VARCHAR(20),
+	profile_picture VARCHAR(200),
     consultation_fee DECIMAL(10,2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -62,10 +63,10 @@ func Connectionpool(databasesourceName string) error {
 }
 
 // create function to terminate connection
-func Closeconn() error {
-	if Db != nil {
-		return Db.Close()
-	}
-	return nil
+// func Closeconn() error {
+// 	if Db != nil {
+// 		return Db.Close()
+// 	}
+// 	return nil
 
-}
+// }
