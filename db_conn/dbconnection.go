@@ -3,6 +3,7 @@ package handlerconn
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -15,6 +16,12 @@ func Connectionpool(databasesourceName string) error {
 	if Db, err = sql.Open("postgres", databasesourceName); err != nil {
 		return err
 	}
+
+	// configuration of new connection pool
+	Db.SetMaxOpenConns(25)
+	Db.SetConnMaxIdleTime(25)
+	Db.SetConnMaxLifetime(5 * time.Minute)
+
 	// Db.Ping used to verify if the connection is alive and properly configured
 	if err = Db.Ping(); err != nil {
 		return err

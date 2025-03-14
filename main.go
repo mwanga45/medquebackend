@@ -21,11 +21,11 @@ const conn_string = "user=postgres dbname=medque password=lynx host=localhost ss
 if err := handlerconn.Connectionpool(conn_string);err != nil{
 	log.Fatalf("something went wrong failed to connect to database %v", err)
 }
-defer func(){
-	if err := handlerconn.Db.Close();err !=nil{
-		log.Fatalf("there is no connection to database")
-	}
-}()
+// defer func(){
+// 	if err := handlerconn.Db.Close();err !=nil{
+// 		log.Fatalf("there is no connection to database")
+// 	}
+// }()
 // configure Cors middleware
 cors := handlers.CORS(
 	handlers.AllowedOrigins([]string {"*"}),
