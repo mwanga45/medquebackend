@@ -54,4 +54,14 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
   }
   doctors = append(doctors, doctor)
 
+  if  rows.Err() != nil{
+	w.WriteHeader(http.StatusInternalServerError)
+	json.NewEncoder(w).Encode(Response{
+		Messsage: "data failed to be proccessed",
+		Success: false,
+
+	})
+	return
+  }
+   
 }
