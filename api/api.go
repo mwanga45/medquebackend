@@ -39,42 +39,41 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	value := make([]interface{}, count)
 	valueptrs := make([]interface{}, count)
 
-	for rows.Next(){
-		for i := range columns{
+	for rows.Next() {
+		for i := range columns {
 			valueptrs[i] = &value[i]
 		}
 		rows.Scan(valueptrs...)
+		// create another slice that will hold  single row data as value and also column name  as key after each loop
+		doctor := make(map[string]interface{})
+		for i, col := range columns {
+			val := value[i]
+			doctor[col] = val
+		}
+		doctors = append(doctors, doctor)
 	}
 
-	// create another slice that will hold  single row data as value and also column name  as key after each loop  
-	doctor := make( map[string]interface{})
-  for i , col := range columns{
-	val := value[i]
-	doctor[col] = val
-  }
-  doctors = append(doctors, doctor)
 
-  if  rows.Err() != nil{
-	w.WriteHeader(http.StatusInternalServerError)
-	json.NewEncoder(w).Encode(Response{
-		Messsage: "data failed to be proccessed",
-		Success: false,
-
+	if err := rows.Err(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Messsage: "data failed to be proccessed",
+			Success:  false,
+		})
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	err = json.NewEncoder(w).Encode(Response{
+		Messsage: "successfuly fetch data",
+		Success:  true,
+		Data:     doctors,
 	})
-	return
-  }
-   w.Header().Set("content-type", "application/json")
-   err = json.NewEncoder(w).Encode(Response{
-	Messsage: "successfuly fetch data",
-	Success: true,
-	Data: doctors,
-   })
 
-   if err != nil{
-	json.NewEncoder(w).Encode(Response{
-		Messsage: "failed to encode data ",
-		Success: false,
-	})
-	return
-   }
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Messsage: "failed to encode data ",
+			Success:  false,
+		})
+		return
+	}
 }
