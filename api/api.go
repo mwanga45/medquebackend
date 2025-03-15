@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	handlerconn "medquemod/db_conn"
 	"net/http"
 )
 
@@ -19,6 +20,16 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		Success: false,
 	})
 	return
+   }
+
+   rows,err := handlerconn.Db.Query("SELECT * FROM doctors")
+   
+   if err != nil{
+	w.WriteHeader(http.StatusInternalServerError)
+	json.NewEncoder(w).Encode(Response{
+		Messsage: "database failed to fetch data",
+		Success: false,
+	})
    }
 
 }
