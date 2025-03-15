@@ -7,16 +7,16 @@ import (
 )
 
 type Response struct {
-	Messsage string      `json:"message"`
+	Message string      `json:"message"`
 	Success  bool        `json:"success,omitempty"`
-	Data     interface{} `json:"Data" `
+	Data     interface{} `json:"data"`
 }
 
 func Doctors(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
-			Messsage: "Invalid method used ",
+			Message: "Invalid method used ",
 			Success:  false,
 		})
 		return
@@ -27,7 +27,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
-			Messsage: "database failed to fetch data",
+			Message: "database failed to fetch data",
 			Success:  false,
 		})
 		return
@@ -59,7 +59,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	if err := rows.Err(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
-			Messsage: "data failed to be proccessed",
+			Message: "data failed to be proccessed",
 			Success:  false,
 		})
 		return
@@ -67,14 +67,14 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("content-type", "application/json")
 	err = json.NewEncoder(w).Encode(Response{
-		Messsage: "successfuly fetch data",
+		Message: "successfuly fetch data",
 		Success:  true,
 		Data:     doctors,
 	})
 	// handling encoding process if error occur
 	if err != nil {
 		json.NewEncoder(w).Encode(Response{
-			Messsage: "failed to encode data ",
+			Message: "failed to encode data ",
 			Success:  false,
 		})
 		return

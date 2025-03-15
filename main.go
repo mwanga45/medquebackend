@@ -16,7 +16,7 @@ func main() {
 	r := mux.NewRouter()
 	// r.HandleFunc("/register",authentic.Reg_authentic)
 	r.HandleFunc("/register", authentic.Handler).Methods("POST")
-	r.HandleFunc("/doctdetail", api.Doctors).Methods("GET")
+	r.HandleFunc("/doctorinfo", api.Doctors).Methods("GET")
 
 	// call function connectionpool
 	const conn_string = "user=postgres dbname=medque password=lynx host=localhost sslmode=disable"
