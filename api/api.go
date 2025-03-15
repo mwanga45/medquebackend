@@ -63,5 +63,18 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	})
 	return
   }
-   
+   w.Header().Set("content-type", "application/json")
+   err = json.NewEncoder(w).Encode(Response{
+	Messsage: "successfuly fetch data",
+	Success: true,
+	Data: doctors,
+   })
+
+   if err != nil{
+	json.NewEncoder(w).Encode(Response{
+		Messsage: "failed to encode data ",
+		Success: false,
+	})
+	return
+   }
 }
