@@ -32,11 +32,26 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	//    create are slice which will hold the row as value and column name as key at end
+	// create are slice which will hold the row as value and column name as key at end
 	var doctors []map[string]interface{}
 	columns, _ := rows.Columns()
 	count := len(columns)
 	value := make([]interface{}, count)
 	valueptrs := make([]interface{}, count)
+
+	for rows.Next(){
+		for i := range columns{
+			valueptrs[i] = &value[i]
+		}
+		rows.Scan(valueptrs...)
+	}
+
+	// create another slice that will hold  single row data as value and also column name  as key after each loop  
+	doctor := make( map[string]interface{})
+  for i , col := range columns{
+	val := value[i]
+	doctor[col] = val
+  }
+  doctors = append(doctors, doctor)
 
 }
