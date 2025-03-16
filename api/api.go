@@ -84,3 +84,6 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 func bookingList(w http.ResponseWriter, r *http.Request)  {
 	
 }
+func handlebookingTime(w http.ResponseWriter, r*http.Request){
+	
+}
