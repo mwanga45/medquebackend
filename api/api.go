@@ -80,3 +80,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func bookingList(w http.ResponseWriter, r *http.Request)  {
+	
+}
