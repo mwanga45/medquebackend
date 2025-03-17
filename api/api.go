@@ -11,6 +11,9 @@ type Response struct {
 	Success  bool        `json:"success,omitempty"`
 	Data     interface{} `json:"data"`
 }
+type DeviceUid struct{
+	DeviceId string `json:"deviceId"`
+}
 
 func Doctors(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -82,7 +85,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func Userdetails(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodGet{
+	if r.Method != http.MethodGet && r.Method != http.MethodPost{
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalid method used to fetch data",
@@ -90,8 +93,17 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 		})
 		return
 	}
-	query:= "SELECT * FROM Patients"
-	row , err := handlerconn.Db.Query(query)
+	query:= "SELECT * FROM Patients WHERE deviceId = $1"
+	var dvId DeviceUid
+	if err := json.NewEncoder(w).Encode(&dvId);err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Server Failed to process data",
+			Success: false,
+		})
+		return
+	}
+	row , err := handlerconn.Db.Query(query,dvId.DeviceId)
 	if err != nil{
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
@@ -111,7 +123,14 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 		for i := range use_columns{
 			ptrvalue_columns[i] = &values_columns[i]
 		}
-		row.Scan(ptrvalue_columns...)
+		if err :=row.Scan(ptrvalue_columns...);err !=nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(Response{
+				Message: "Database failed to scan rows value",
+				Success: false,
+			})
+			return
+		}
 		user_detail := make(map[string]interface{}) 
 		for i , col := range use_columns {
 			val := values_columns[i]
