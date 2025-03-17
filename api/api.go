@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	handlerconn "medquemod/db_conn"
 	"net/http"
+	"strings"
 )
 
 type Response struct {
@@ -99,7 +100,18 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 		})
 		return
 	}
-	
+	 var user_details   []map[string]interface{}
+	 use_columns,_ := row.Columns()
+	 count := len(use_columns)
+	 values_columns := make([]interface{},count)
+	 ptrvalue_columns := make([]interface{},count)
+
+	 for row.Next(){
+		for i := range use_columns{
+			ptrvalue_columns[i] = values_columns[i]
+		}
+		row.Scan(ptrvalue_columns...)
+	 }
 
 }
 func BookingList(w http.ResponseWriter, r *http.Request)  {
