@@ -13,6 +13,7 @@ type reg_request struct{
 	Phone_num string `json:"phone_num"`
 	Email_address string `json:"email_address"`
 	Home_address string `json:"home_address"`
+	DeviceId string `json:"deviceId"`
 }
 type response struct{
 	Success bool `json:"success"`
@@ -49,9 +50,9 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		return
 	}
 
-	insert_query := "INSERT INTO Patients(full_name, home_address, email,phone_number,user_type) VALUES($1,$2,$3,$4,$5)"
+	insert_query := "INSERT INTO Patients(full_name, home_address, email,phone_number,deviceId,user_type) VALUES($1,$2,$3,$4,$5,$6)"
 
-	_,err = handlerconn.Db.Exec(insert_query,req.Fullname,req.Home_address,req.Email_address,req.Phone_num,"Patient")
+	_,err = handlerconn.Db.Exec(insert_query,req.Fullname,req.Home_address,req.Email_address,req.Phone_num,req.DeviceId,"Patient")
 
 	if err != nil{
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
