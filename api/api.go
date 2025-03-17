@@ -100,7 +100,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 		})
 		return
 	}
-	 var user_details   []map[string]interface{}
+	 var user_details []map[string]interface{}
 	 use_columns,_ := row.Columns()
 	 count := len(use_columns)
 	 values_columns := make([]interface{},count)
@@ -108,11 +108,17 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 
 	 for row.Next(){
 		for i := range use_columns{
-			ptrvalue_columns[i] = values_columns[i]
+			ptrvalue_columns[i] = &values_columns[i]
 		}
 		row.Scan(ptrvalue_columns...)
 	 }
-
+     user_detail := make(map[string]interface{}) 
+	 for i , col := range use_columns {
+		val := values_columns[i]
+		user_detail[col] = val
+		
+	 }
+	 user_details = append(user_details, user_detail)
 }
 func BookingList(w http.ResponseWriter, r *http.Request)  {
 	
