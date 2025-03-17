@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	handlerconn "medquemod/db_conn"
 	"net/http"
-	"strings"
 )
 
 type Response struct {
@@ -33,6 +32,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	defer rows.Close()
 	// create are slice which will hold the row as value and column name as key at end
 	var doctors []map[string]interface{}
 	// store columns name variable
@@ -117,6 +117,27 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 		val := values_columns[i]
 		user_detail[col] = val
 		
+	 }
+	 defer row.Close()
+	 if err := row.Err(); err != nil{
+       w.WriteHeader(http.StatusInternalServerError)
+	   json.NewEncoder(w).Encode(Response{
+		Message: "failed to proccess data",
+		Success: false,
+	   })
+	   return
+	 }
+	 w.Header().Set("Content-Type", "application/json")
+	 if err = json.NewEncoder(w).Encode(Response{
+		Message: "successfuly return data",
+		Success: true,
+	 });err != nil{
+      w.WriteHeader(http.StatusInternalServerError)
+	  json.NewEncoder(w).Encode(Response{
+		Message: "Failed to encode data",
+		Success: false,
+	  })
+	  return
 	 }
 	 user_details = append(user_details, user_detail)
 }
