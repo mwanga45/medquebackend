@@ -80,7 +80,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func userdetails(w http.ResponseWriter, r *http.Request){
+func Userdetails(w http.ResponseWriter, r *http.Request){
 	if r.Method != http.MethodGet{
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
@@ -89,10 +89,22 @@ func userdetails(w http.ResponseWriter, r *http.Request){
 		})
 		return
 	}
+	query:= "SELECT * FROM Patients"
+	row , err := handlerconn.Db.Query(query)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		return
+	}
+	
+
 }
-func bookingList(w http.ResponseWriter, r *http.Request)  {
+func BookingList(w http.ResponseWriter, r *http.Request)  {
 	
 }
-func handlebookingTime(w http.ResponseWriter, r*http.Request){
+func BandlebookingTime(w http.ResponseWriter, r*http.Request){
 	
 }
