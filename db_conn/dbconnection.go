@@ -72,6 +72,7 @@ func Connectionpool(databasesourceName string) error {
 		email VARCHAR(100) UNIQUE NOT NULL,
 		phone_number VARCHAR(20) UNIQUE,
 		deviceId VARCHAR(200)UNIQUE,
+		Age VARCHAR(20),
 		user_type VARCHAR(20) CHECK (user_type IN ('Patient')),
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
