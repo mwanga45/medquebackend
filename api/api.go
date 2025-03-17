@@ -80,7 +80,16 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
+func userdetails(w http.ResponseWriter, r *http.Request){
+	if r.Method != http.MethodGet{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid method used to fetch data",
+			Success: false,
+		})
+		return
+	}
+}
 func bookingList(w http.ResponseWriter, r *http.Request)  {
 	
 }
