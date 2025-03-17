@@ -100,6 +100,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 		})
 		return
 	}
+	defer row.Close()
 	 var user_details []map[string]interface{}
 	 use_columns,_ := row.Columns()
 	 count := len(use_columns)
@@ -111,14 +112,14 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 			ptrvalue_columns[i] = &values_columns[i]
 		}
 		row.Scan(ptrvalue_columns...)
-	 }
-     user_detail := make(map[string]interface{}) 
-	 for i , col := range use_columns {
-		val := values_columns[i]
-		user_detail[col] = val
+		user_detail := make(map[string]interface{}) 
+		for i , col := range use_columns {
+			val := values_columns[i]
+			user_detail[col] = val
+		}
 		
+		user_details = append(user_details, user_detail)
 	 }
-	 defer row.Close()
 	 if err := row.Err(); err != nil{
        w.WriteHeader(http.StatusInternalServerError)
 	   json.NewEncoder(w).Encode(Response{
@@ -131,6 +132,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 	 if err = json.NewEncoder(w).Encode(Response{
 		Message: "successfuly return data",
 		Success: true,
+		Data: user_details,
 	 });err != nil{
       w.WriteHeader(http.StatusInternalServerError)
 	  json.NewEncoder(w).Encode(Response{
@@ -139,7 +141,6 @@ func Userdetails(w http.ResponseWriter, r *http.Request){
 	  })
 	  return
 	 }
-	 user_details = append(user_details, user_detail)
 }
 func BookingList(w http.ResponseWriter, r *http.Request)  {
 	
