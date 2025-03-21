@@ -28,17 +28,16 @@ type (
 		Threshold string `json:"threshold"`
 	}
 	// create struct that will able to generate request
-	GenerateContentRequest struct{
-		Contents []Content `json:"contents"`
-		SafetySetting []SafetySetting `json:"safetysetting"`
-		GenerateConfig  GenerateConfig `json:"generateconfig"`
-
+	GenerateContentRequest struct {
+		Contents       []Content       `json:"contents"`
+		SafetySetting  []SafetySetting `json:"safetysetting"`
+		GenerateConfig GenerateConfig  `json:"generateconfig"`
 	}
 	// create struct that will able to return response to user
-	GenerateContentResponse struct{
-		Candidate []struct{
-			Content struct{
-				Parts []Part `json:"parts"` 
+	GenerateContentResponse struct {
+		Candidate []struct {
+			Content struct {
+				Parts []Part `json:"parts"`
 			} `json:"contents"`
 		} `json:"candidate"`
 	}
@@ -46,17 +45,15 @@ type (
 		Response            string `json:"response"`
 		MessageResonseError string `json:"messageResponseError,omitempty"`
 	}
-
 )
-
 
 func Chatbot() {
 
 }
-func GenerateRequestToGemin(userInput string) *GenerateContentRequest{
+func GenerateRequestToGemin(userInput string) *GenerateContentRequest {
 	return &GenerateContentRequest{
 		Contents: []Content{
-            {
+			{
 				Role: "user",
 				Parts: []Part{
 					{
@@ -71,9 +68,14 @@ func GenerateRequestToGemin(userInput string) *GenerateContentRequest{
 						Text: userInput,
 					},
 				},
-
 			},
-
+		},
+		GenerateConfig: GenerateConfig{
+			Temperature: 0.9,
+			TopK:1 ,
+			TopP: 1,
+			MaxOutputToken: 1000,
+			
 		},
 	}
 }
