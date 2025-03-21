@@ -22,10 +22,10 @@ type (
 	}
 	// create struct that will hold field to configure the userInput  in property
 	GenerateConfig struct {
-		Temperature    float32 `json:"temperature"`
-		TopK           int     `json:"topk"`
-		TopP           float32 `json:"topP"`
-		MaxOutputToken int     `json:"maxoutputtoken"`
+		Temperature     float32 `json:"temperature"`
+		TopK            int     `json:"topK"`
+		TopP            float32 `json:"topP"`
+		MaxOutputTokens int     `json:"maxOutputTokens"`
 	}
 	// create the struct  will check the safety of message
 	SafetySetting struct {
