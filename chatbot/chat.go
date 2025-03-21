@@ -30,7 +30,17 @@ type (
 	// create struct that will able to generate request
 	GenerateRequest struct{
 		Contents []Content `json:"contents"`
+		SafetySetting []SafetySetting `json:"safetysetting"`
+		GenerateConfig  GenerateConfig `json:"generateconfig"`
 
+	}
+	// create struct that will able to return response to user
+	GenerateResponse struct{
+		Candidate []struct{
+			Content struct{
+				Parts []Part `json:"parts"` 
+			} `json:"contents"`
+		} `json:"candidate"`
 	}
 	chatbotResponse struct {
 		Response            string `json:"response"`
