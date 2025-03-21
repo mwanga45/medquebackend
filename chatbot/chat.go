@@ -77,6 +77,12 @@ func GenerateRequestToGemin(userInput string) *GenerateContentRequest {
 			MaxOutputToken: 1000,
 			
 		},
+		SafetySetting: []SafetySetting{
+			{
+				Category: "HARM_CATEGORY_HARASSMENT",
+				Threshold: "BLOCK_MEDIUM_AND_ABOVE",
+			},
+		},
 	}
 }
 func SendErr(w http.ResponseWriter, message string, statusCode int) {
