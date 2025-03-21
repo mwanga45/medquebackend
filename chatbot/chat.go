@@ -50,27 +50,49 @@ type (
 		Response            string `json:"response"`
 		MessageResonseError string `json:"messageResponseError,omitempty"`
 	}
+	ChatRequest struct {
+		UserInput string `json:"userInput"`
+	}
 )
 const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
-func Chatbot() {
+func Chatbot(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ChatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		SendErr(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	response, err := ProcessChatRequest(req.UserInput)
+	if err != nil {
+		SendErr(w, "Error processing request", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 
 }
-func processChatRequest(userInput string) (*ChatResponse, error) {
+func ProcessChatRequest(userInput string) (*ChatResponse, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		return nil, fmt.Errorf("missing GEMINI_API_KEY environment variable")
 	}
 
-	geminiReq := createGeminiRequest(userInput)
-	responseText, err := callGeminiAPI(geminiReq, apiKey)
+	geminiReq := CreateGeminiRequest(userInput)
+	responseText, err := CallGeminiAPI(geminiReq, apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("gemini API error: %v", err)
 	}
 
 	return &ChatResponse{Response: responseText}, nil
 }
-func createGeminiRequest(userInput string) *GenerateContentRequest {
+func CreateGeminiRequest(userInput string) *GenerateContentRequest {
 	return &GenerateContentRequest{
 		Contents: []Content{
 			{
@@ -105,7 +127,7 @@ func createGeminiRequest(userInput string) *GenerateContentRequest {
 		},
 	}
 }
-func callGeminiAPI(req *GenerateContentRequest, apiKey string) (string, error) {
+func CallGeminiAPI(req *GenerateContentRequest, apiKey string) (string, error) {
 	jsonBody, err := json.Marshal(req)
 	if err != nil {
 		return "", fmt.Errorf("error marshaling request: %v", err)
