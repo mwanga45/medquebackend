@@ -28,14 +28,14 @@ type (
 		Threshold string `json:"threshold"`
 	}
 	// create struct that will able to generate request
-	GenerateRequest struct{
+	GenerateContentRequest struct{
 		Contents []Content `json:"contents"`
 		SafetySetting []SafetySetting `json:"safetysetting"`
 		GenerateConfig  GenerateConfig `json:"generateconfig"`
 
 	}
 	// create struct that will able to return response to user
-	GenerateResponse struct{
+	GenerateContentResponse struct{
 		Candidate []struct{
 			Content struct{
 				Parts []Part `json:"parts"` 
