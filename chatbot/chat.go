@@ -49,10 +49,34 @@ type (
 
 )
 
+
 func Chatbot() {
 
 }
+func GenerateRequestToGemin(userInput string) *GenerateContentRequest{
+	return &GenerateContentRequest{
+		Contents: []Content{
+            {
+				Role: "user",
+				Parts: []Part{
+					{
+						Text: "Modele promit here ",
+					},
+				},
+			},
+			{
+				Role: "user",
+				Parts: []Part{
+					{
+						Text: userInput,
+					},
+				},
 
+			},
+
+		},
+	}
+}
 func SendErr(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(chatbotResponse{
