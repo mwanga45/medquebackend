@@ -1,8 +1,12 @@
 package handler_chat
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"time"
 )
 
 // create struct that will hold text field
@@ -84,6 +88,42 @@ func GenerateRequestToGemin(userInput string) *GenerateContentRequest {
 			},
 		},
 	}
+}
+func callGeminiAPI(req *GenerateContentRequest, apiKey string) (string, error) {
+	jsonBody, err := json.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling request: %v", err)
+	}
+
+	url := fmt.Sprintf("%s?key=%s", geminiEndpoint, apiKey)
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %v", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("API request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("API returned %d: %s", resp.StatusCode, body)
+	}
+
+	var geminiResp GenerateContentResponse
+	if err := json.NewDecoder(resp.Body).Decode(&geminiResp); err != nil {
+		return "", fmt.Errorf("error decoding response: %v", err)
+	}
+
+	if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("empty response from Gemini")
+	}
+
+	return geminiResp.Candidates[0].Content.Parts[0].Text, nil
 }
 func SendErr(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
