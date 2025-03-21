@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -45,16 +46,31 @@ type (
 			} `json:"contents"`
 		} `json:"candidate"`
 	}
-	chatbotResponse struct {
+	ChatResponse struct {
 		Response            string `json:"response"`
 		MessageResonseError string `json:"messageResponseError,omitempty"`
 	}
 )
+const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
 func Chatbot() {
 
 }
-func GenerateRequestToGemin(userInput string) *GenerateContentRequest {
+func processChatRequest(userInput string) (*ChatResponse, error) {
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("missing GEMINI_API_KEY environment variable")
+	}
+
+	geminiReq := createGeminiRequest(userInput)
+	responseText, err := callGeminiAPI(geminiReq, apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("gemini API error: %v", err)
+	}
+
+	return &ChatResponse{Response: responseText}, nil
+}
+func createGeminiRequest(userInput string) *GenerateContentRequest {
 	return &GenerateContentRequest{
 		Contents: []Content{
 			{
@@ -127,7 +143,7 @@ func callGeminiAPI(req *GenerateContentRequest, apiKey string) (string, error) {
 }
 func SendErr(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(chatbotResponse{
+	json.NewEncoder(w).Encode(ChatResponse{
 		MessageResonseError: message,
 	})
 }
