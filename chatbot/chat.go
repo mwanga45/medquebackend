@@ -40,7 +40,7 @@ type (
 	}
 	// create struct that will able to return response to user
 	GenerateContentResponse struct {
-		Candidate []struct {
+		Candidates  []struct {
 			Content struct {
 				Parts []Part `json:"parts"`
 			} `json:"contents"`
