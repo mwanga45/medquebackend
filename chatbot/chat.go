@@ -40,7 +40,7 @@ type (
 	}
 	// create struct that will able to return response to user
 	GenerateContentResponse struct {
-		Candidates  []struct {
+		Candidates []struct {
 			Content struct {
 				Parts []Part `json:"parts"`
 			} `json:"contents"`
@@ -54,6 +54,7 @@ type (
 		UserInput string `json:"userInput"`
 	}
 )
+
 const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
 func Chatbot(w http.ResponseWriter, r *http.Request) {
@@ -113,15 +114,14 @@ func CreateGeminiRequest(userInput string) *GenerateContentRequest {
 			},
 		},
 		GenerateConfig: GenerateConfig{
-			Temperature: 0.9,
-			TopK:1 ,
-			TopP: 1,
-			MaxOutputToken: 1000,
-			
+			Temperature:     0.9,
+			TopK:            1,
+			TopP:            1,
+			MaxOutputTokens: 1000,
 		},
 		SafetySetting: []SafetySetting{
 			{
-				Category: "HARM_CATEGORY_HARASSMENT",
+				Category:  "HARM_CATEGORY_HARASSMENT",
 				Threshold: "BLOCK_MEDIUM_AND_ABOVE",
 			},
 		},
