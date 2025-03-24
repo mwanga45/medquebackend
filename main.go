@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-
 	r := mux.NewRouter()
 	// r.HandleFunc("/register",authentic.Reg_authentic)
 	r.HandleFunc("/register", authentic.Handler).Methods("POST")
