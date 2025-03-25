@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
+	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 // create struct that will hold text field
@@ -21,7 +25,7 @@ type (
 		Parts []Part `json:"parts"`
 	}
 	// create struct that will hold field to configure the userInput  in property
-	GenerateConfig struct {
+	GenerationConfig struct {
 		Temperature     float32 `json:"temperature"`
 		TopK            int     `json:"topK"`
 		TopP            float32 `json:"topP"`
@@ -34,21 +38,21 @@ type (
 	}
 	// create struct that will able to generate request
 	GenerateContentRequest struct {
-		Contents       []Content       `json:"contents"`
-		SafetySetting  []SafetySetting `json:"safetysetting"`
-		GenerateConfig GenerateConfig  `json:"generateconfig"`
+		Contents         []Content        `json:"contents"`
+		SafetySettings   []SafetySetting  `json:"safetySettings"`   // Fixed case
+		GenerationConfig GenerationConfig `json:"generationConfig"` // Fixed name
 	}
 	// create struct that will able to return response to user
 	GenerateContentResponse struct {
 		Candidates []struct {
 			Content struct {
 				Parts []Part `json:"parts"`
-			} `json:"contents"`
-		} `json:"candidate"`
+			} `json:"content"` // Correct key
+		} `json:"candidates"` // Correct plural
 	}
 	ChatResponse struct {
-		Response            string `json:"response"`
-		MessageResonseError string `json:"messageResponseError,omitempty"`
+		Response string `json:"response"`
+		Error    string `json:"error,omitempty"` // Standardized error field
 	}
 	ChatRequest struct {
 		UserInput string `json:"userInput"`
@@ -62,7 +66,6 @@ func Chatbot(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	var req ChatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		SendErr(w, "Invalid request body", http.StatusBadRequest)
@@ -71,7 +74,7 @@ func Chatbot(w http.ResponseWriter, r *http.Request) {
 
 	response, err := ProcessChatRequest(req.UserInput)
 	if err != nil {
-		SendErr(w, "Error processing request", http.StatusInternalServerError)
+		SendErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -80,11 +83,13 @@ func Chatbot(w http.ResponseWriter, r *http.Request) {
 
 }
 func ProcessChatRequest(userInput string) (*ChatResponse, error) {
+	godotenv.Load(".env")
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		return nil, fmt.Errorf("missing GEMINI_API_KEY environment variable")
+		log.Println("Missing GEMINI_API_KEY environment variable")
+        return nil, fmt.Errorf("missing GEMINI_API_KEY environment variable")
 	}
-
+	
 	geminiReq := CreateGeminiRequest(userInput)
 	responseText, err := CallGeminiAPI(geminiReq, apiKey)
 	if err != nil {
@@ -98,28 +103,47 @@ func CreateGeminiRequest(userInput string) *GenerateContentRequest {
 		Contents: []Content{
 			{
 				Role: "user",
-				Parts: []Part{
-					{
-						Text: "Modele promit here ",
-					},
-				},
+				Parts: []Part{{
+					Text: `You are Sam, a friendly assistant...younhave been create by Issa Mwanga [User: Hi, I have a question about managing my blood pressure.
+AI Chatbot: Hello! I’m here to provide you with general health information. However, please note that I am not a doctor, and any information I provide should not replace professional medical advice. Could you tell me a bit more about your situation or what specifically you’d like to know about managing blood pressure?
+User: I'm looking for lifestyle changes that might help lower my blood pressure.
+AI Chatbot: Great, I can share some common lifestyle recommendations that many people find helpful. Often, these include:
+
+Dietary Changes: Incorporating a diet rich in fruits, vegetables, and whole grains while reducing salt intake.
+
+Physical Activity: Engaging in regular exercise like brisk walking or swimming.
+
+Stress Management: Techniques such as meditation, yoga, or deep breathing exercises.
+
+Monitoring: Keeping track of your blood pressure regularly and noting any changes.
+
+Please keep in mind that these suggestions are general, and it's important to consult with a healthcare provider for personalized advice. Do you have any more questions or need further details on any of these points?]`,
+				}},
 			},
 			{
-				Role: "user",
-				Parts: []Part{
-					{
-						Text: userInput,
-					},
-				},
+				Role:  "model",
+				Parts: []Part{{Text: "Hello! Welcome to Coding Money..."}},
+			},
+			{
+				Role:  "user",
+				Parts: []Part{{Text: "Hi"}},
+			},
+			{
+				Role:  "model",
+				Parts: []Part{{Text: "Hi there! Thanks for reaching out..."}},
+			},
+			{
+				Role:  "user",
+				Parts: []Part{{Text: userInput}},
 			},
 		},
-		GenerateConfig: GenerateConfig{
+		GenerationConfig: GenerationConfig{
 			Temperature:     0.9,
 			TopK:            1,
 			TopP:            1,
 			MaxOutputTokens: 1000,
 		},
-		SafetySetting: []SafetySetting{
+		SafetySettings: []SafetySetting{
 			{
 				Category:  "HARM_CATEGORY_HARASSMENT",
 				Threshold: "BLOCK_MEDIUM_AND_ABOVE",
@@ -165,7 +189,8 @@ func CallGeminiAPI(req *GenerateContentRequest, apiKey string) (string, error) {
 }
 func SendErr(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode) // Add this line
 	json.NewEncoder(w).Encode(ChatResponse{
-		MessageResonseError: message,
+		Error: message, // Use corrected error field
 	})
 }

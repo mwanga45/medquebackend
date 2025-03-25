@@ -19,7 +19,7 @@ func main() {
 	r.HandleFunc("/register", authentic.Handler).Methods("POST")
 	r.HandleFunc("/doctorinfo", api.Doctors).Methods("GET")
 	r.HandleFunc("/userinfo", api.Userdetails).Methods("GET")
-	r.HandleFunc("/chatbot",handler_chat.Chatbot)
+	r.HandleFunc("/chatbot",handler_chat.Chatbot).Methods("POST")
 
 	// call function connectionpool
 	const conn_string = "user=postgres dbname=medque password=lynx host=localhost sslmode=disable"
@@ -34,7 +34,7 @@ func main() {
 	// configure Cors middleware
 	cors := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"POST", "PUT", "GET", "DELETE"}),
+		handlers.AllowedMethods([]string{"POST", "PUT", "GET", "DELETE","OPTIONS"}),
 		handlers.AllowedHeaders([]string{"content-type", "Authorization"}),
 	)
 
