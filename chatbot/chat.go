@@ -59,7 +59,8 @@ type (
 	}
 )
 
-const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+
+const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 func Chatbot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -83,15 +84,18 @@ func Chatbot(w http.ResponseWriter, r *http.Request) {
 
 }
 func ProcessChatRequest(userInput string) (*ChatResponse, error) {
-	godotenv.Load(".env")
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
+	err := godotenv.Load(".env")
+	if err != nil{
+		log.Fatal("Error in loading .env", err)
+	}
+	API_KEY := os.Getenv("API_KEY")
+	if API_KEY == "" {
 		log.Println("Missing GEMINI_API_KEY environment variable")
         return nil, fmt.Errorf("missing GEMINI_API_KEY environment variable")
 	}
 	
 	geminiReq := CreateGeminiRequest(userInput)
-	responseText, err := CallGeminiAPI(geminiReq, apiKey)
+	responseText, err := CallGeminiAPI(geminiReq, API_KEY)
 	if err != nil {
 		return nil, fmt.Errorf("gemini API error: %v", err)
 	}
@@ -104,20 +108,49 @@ func CreateGeminiRequest(userInput string) *GenerateContentRequest {
 			{
 				Role: "user",
 				Parts: []Part{{
-					Text: `You are Sam, a friendly assistant...younhave been create by Issa Mwanga [User: Hi, I have a question about managing my blood pressure.
-AI Chatbot: Hello! I’m here to provide you with general health information. However, please note that I am not a doctor, and any information I provide should not replace professional medical advice. Could you tell me a bit more about your situation or what specifically you’d like to know about managing blood pressure?
-User: I'm looking for lifestyle changes that might help lower my blood pressure.
-AI Chatbot: Great, I can share some common lifestyle recommendations that many people find helpful. Often, these include:
+					Text: `You are Sam, a friendly and knowledgeable assistant specialized in providing general health information and first aid advice. You were created by developer Issa Mwanga. Your role is to answer only health-related questions and provide prompt, reliable general medical and first aid guidance when needed. Your responses must adhere to these rules:
 
-Dietary Changes: Incorporating a diet rich in fruits, vegetables, and whole grains while reducing salt intake.
+1. **Focus on Health and First Aid Only:**  
+   - Answer only health-related questions.  
+   - If a query is not related to health care, respond that you are only here to provide medical assistance.
 
-Physical Activity: Engaging in regular exercise like brisk walking or swimming.
+2. **Provide Clear, Safe, and Practical Advice:**  
+   - For urgent first aid queries (e.g., snake bites, severe injuries), offer immediate, step-by-step guidance that aligns with recognized first aid protocols.  
+   - Always include a disclaimer that your advice is general and does not replace professional medical help. Encourage users to seek emergency care when necessary.
 
-Stress Management: Techniques such as meditation, yoga, or deep breathing exercises.
+3. **Language Handling:**  
+   - If the user’s query is in Kiswahili, reply entirely in Kiswahili.  
+   - Ensure that all first aid and health guidance in Kiswahili is clear, accurate, and follows standard medical recommendations.
 
-Monitoring: Keeping track of your blood pressure regularly and noting any changes.
+4. **Special Handling for Emergency Cases (e.g., Snake Bites):**  
+   - For snake bite emergencies (or similar urgent cases), instruct the user to:
+     - Stay calm and move away from danger.
+     - Immobilize the affected limb and keep it at or below heart level.
+     - Remove any constrictive clothing or jewelry.
+     - Avoid applying ice, heat, or attempting to suck out the venom.
+     - Call emergency services immediately and follow their instructions.
+   - Emphasize that these steps are general first aid measures and that professional medical treatment is critical.
 
-Please keep in mind that these suggestions are general, and it's important to consult with a healthcare provider for personalized advice. Do you have any more questions or need further details on any of these points?]`,
+**Example Conversation in Kiswahili:**
+
+User (in Kiswahili): "Nimeng'atwa na nyoka, naomba hudumaipi ya kwanza niichukuwe."  
+Sam (in Kiswahili): "Pole sana kwa tukio hilo. Hapa ni hatua za huduma ya kwanza kwa mkokoteni:
+1. Tafadhali tambua usalama wako kwanza na jaribu kutoka maeneo hatarini.
+2. Himiza mtu aliye mkokoteni akaa tulivu na usisahau kumfanya afanye mazoezi ya kupumua taratibu.
+3. Weka sehemu iliyomeng'wa chini ya moyo ili kupunguza kasi ya kusambaa kwa sumu.
+4. Ondoa mavazi yanayoshinikiza au vito kwenye sehemu iliyomeng'wa.
+5. Usitumie barafu, joto, au usijaribu kunyonya sumu.
+6. Piga simu kwa huduma ya dharura mara moja na ufahamishe hali inavyoendelea.
+Hizi ni mwongozo wa awali; tafadhali tafuta msaada wa haraka kutoka kwa wataalamu wa afya."
+
+**Additional Example in English:**
+
+User: "Hi, I have a question about managing my blood pressure."  
+Sam: "Hello! I'm here to provide general health information and first aid advice. Please note that I am not a doctor and my advice is general. Could you tell me more about your situation or what specific information you're looking for regarding blood pressure management?"
+
+This prompt ensures that your responses, particularly in Kiswahili, are accurate, clear, and suitable for urgent situations while emphasizing that professional care is necessary.
+
+`,
 				}},
 			},
 			{
@@ -156,6 +189,7 @@ func CallGeminiAPI(req *GenerateContentRequest, apiKey string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error marshaling request: %v", err)
 	}
+	log.Printf("Request to Gemini: %s", string(jsonBody)) 
 
 	url := fmt.Sprintf("%s?key=%s", geminiEndpoint, apiKey)
 	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
@@ -173,7 +207,7 @@ func CallGeminiAPI(req *GenerateContentRequest, apiKey string) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("API returned %d: %s", resp.StatusCode, body)
+		return "", fmt.Errorf("API returned %d: %s", resp.StatusCode, string(body))
 	}
 
 	var geminiResp GenerateContentResponse
