@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	handlerconn "medquemod/db_conn"
 	"net/http"
 )
@@ -85,81 +86,28 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func Userdetails(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodGet && r.Method != http.MethodPost{
+	if r.Method != http.MethodPost{
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Invalid method used to fetch data",
-			Success: false,
-		})
 		return
 	}
-	query:= "SELECT * FROM Patients WHERE deviceId = $1"
+	// check if the deviceId is Available for this 
+	query := "SELECT * FROM Users WHERE deviceId = $1"
 	var dvId DeviceUid
-	if err := json.NewEncoder(w).Encode(&dvId);err != nil{
+	err := json.NewDecoder(r.Body).Decode(&dvId)
+	if err !=nil{
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Server Failed to process data",
-			Success: false,
-		})
+		log.Fatal(err)
 		return
 	}
-	row , err := handlerconn.Db.Query(query,dvId.DeviceId)
+    var deviceId string
+	err = handlerconn.Db.QueryRow(query,dvId.DeviceId).Scan(&deviceId)
 	if err != nil{
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Something went wrong",
-			Success: false,
-		})
-		return
-	}
-	defer row.Close()
-	 var user_details []map[string]interface{}
-	 use_columns,_ := row.Columns()
-	 count := len(use_columns)
-	 values_columns := make([]interface{},count)
-	 ptrvalue_columns := make([]interface{},count)
-
-	 for row.Next(){
-		for i := range use_columns{
-			ptrvalue_columns[i] = &values_columns[i]
-		}
-		if err :=row.Scan(ptrvalue_columns...);err !=nil{
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(Response{
-				Message: "Database failed to scan rows value",
-				Success: false,
-			})
-			return
-		}
-		user_detail := make(map[string]interface{}) 
-		for i , col := range use_columns {
-			val := values_columns[i]
-			user_detail[col] = val
-		}
-		
-		user_details = append(user_details, user_detail)
-	 }
-	 if err := row.Err(); err != nil{
-       w.WriteHeader(http.StatusInternalServerError)
-	   json.NewEncoder(w).Encode(Response{
-		Message: "failed to proccess data",
-		Success: false,
-	   })
-	   return
-	 }
-	 w.Header().Set("Content-Type", "application/json")
-	 if err = json.NewEncoder(w).Encode(Response{
-		Message: "successfuly return data",
-		Success: true,
-		Data: user_details,
-	 });err != nil{
       w.WriteHeader(http.StatusInternalServerError)
-	  json.NewEncoder(w).Encode(Response{
-		Message: "Failed to encode data",
-		Success: false,
-	  })
-	  return
-	 }
+	  log.Fatal("Failed to fetch value")
+	}
+
+	
+
 }
 func BookingList(w http.ResponseWriter, r *http.Request)  {
 	
