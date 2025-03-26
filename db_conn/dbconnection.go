@@ -65,7 +65,7 @@ func Connectionpool(databasesourceName string) error {
 		log.Fatal("failed to insert data")
 	  }
 
-	patient_tb := `CREATE TABLE IF NOT EXISTS Patients (
+	user_tb := `CREATE TABLE IF NOT EXISTS Users (
 		user_id  SERIAL  PRIMARY KEY ,
 		full_name VARCHAR(150) NOT NULL,
 		home_address VARCHAR(150),
@@ -76,7 +76,7 @@ func Connectionpool(databasesourceName string) error {
 		user_type VARCHAR(20) CHECK (user_type IN ('Patient')),
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
-	if _,err = Db.Exec(patient_tb);err !=nil{
+	if _,err = Db.Exec(user_tb);err !=nil{
 		log.Fatalf("failed to create table patient_tb %v", err)
 	}
 

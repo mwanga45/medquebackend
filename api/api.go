@@ -16,11 +16,13 @@ type (
 	DeviceUid struct {
 		DeviceId string `json:"deviceId"`
 	}
-	User_details struct{
-	    Name  string `json:"name"`
-		Email string `json:"email"`
-		Phone_num string `json:"phone_numb"`
-		DeviceId string `json:"deviceId"`
+	User_details struct {
+		Name         string `json:"name"`
+		Email        string `json:"email"`
+		Phone_num    string `json:"phone_numb"`
+		DeviceId     string `json:"deviceId"`
+		Home_address string `json:"home_address,omitempty"`
+		Age          string `json:"age"`
 	}
 )
 
