@@ -7,21 +7,29 @@ import (
 	"net/http"
 )
 
-type Response struct {
-	Message string      `json:"message"`
-	Success  bool        `json:"success,omitempty"`
-	Data     interface{} `json:"data"`
-}
-type DeviceUid struct{
-	DeviceId string `json:"deviceId"`
-}
+type (
+	Response struct {
+		Message string      `json:"message"`
+		Success bool        `json:"success,omitempty"`
+		Data    interface{} `json:"data"`
+	}
+	DeviceUid struct {
+		DeviceId string `json:"deviceId"`
+	}
+	User_details struct{
+	    Name  string `json:"name"`
+		Email string `json:"email"`
+		Phone_num string `json:"phone_numb"`
+		DeviceId string `json:"deviceId"`
+	}
+)
 
 func Doctors(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalid method used ",
-			Success:  false,
+			Success: false,
 		})
 		return
 	}
@@ -32,7 +40,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			Message: "database failed to fetch data",
-			Success:  false,
+			Success: false,
 		})
 		return
 	}
@@ -65,7 +73,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			Message: "data failed to be proccessed",
-			Success:  false,
+			Success: false,
 		})
 		return
 	}
@@ -73,45 +81,52 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 	err = json.NewEncoder(w).Encode(Response{
 		Message: "successfuly fetch data",
-		Success:  true,
-		Data:     doctors,
+		Success: true,
+		Data:    doctors,
 	})
 	// handling encoding process if error occur
 	if err != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "failed to encode data ",
-			Success:  false,
+			Success: false,
 		})
 		return
 	}
 }
-func Userdetails(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodPost{
+func Userdetails(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	// check if the deviceId is Available for this 
+	// check if the deviceId is Available for this
 	query := "SELECT * FROM Users WHERE deviceId = $1"
 	var dvId DeviceUid
 	err := json.NewDecoder(r.Body).Decode(&dvId)
-	if err !=nil{
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Fatal(err)
 		return
 	}
-    var deviceId string
-	err = handlerconn.Db.QueryRow(query,dvId.DeviceId).Scan(&deviceId)
-	if err != nil{
-      w.WriteHeader(http.StatusInternalServerError)
-	  log.Fatal("Failed to fetch value")
+	var deviceId string
+	err = handlerconn.Db.QueryRow(query, dvId.DeviceId).Scan(&deviceId)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Fatal("Failed to fetch value")
+	}
+	rows, err := handlerconn.Db.Query("SELECT * FROM Users WHERE deviceId = $1")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
-	
+	for rows.Next() {
+
+	}
 
 }
-func BookingList(w http.ResponseWriter, r *http.Request)  {
-	
+func BookingList(w http.ResponseWriter, r *http.Request) {
+
 }
-func BandlebookingTime(w http.ResponseWriter, r*http.Request){
-	
+func BandlebookingTime(w http.ResponseWriter, r *http.Request) {
+
 }
