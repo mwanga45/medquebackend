@@ -115,16 +115,16 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Fatal("Failed to fetch value")
 	}
-	rows, err := handlerconn.Db.Query("SELECT * FROM Users WHERE deviceId = $1")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	for rows.Next() {
-
-	}
-
+   w.Header().Set("Content-Type", "application/json")
+   err = json.NewEncoder(w).Encode(Response{
+	Message:"Successfully ",
+	Success: true,
+	Data: details,
+   })
+   if err !=nil{
+	w.WriteHeader(http.StatusInternalServerError)
+	return
+   }
 }
 func BookingList(w http.ResponseWriter, r *http.Request) {
 
