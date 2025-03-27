@@ -38,7 +38,7 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		return
 	}
 
-	query := "SELECT   email, phone_number FROM Patients WHERE email = $1 OR phone_number =$2"
+	query := "SELECT   email, phone_number FROM Users WHERE email = $1 OR phone_number =$2"
    var emaiexist , phoneexist string
 	err := handlerconn.Db.QueryRow(query,req.Email_address,req.Phone_num).Scan(&emaiexist, &phoneexist)
 
@@ -51,7 +51,7 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		return
 	}
 
-	insert_query := "INSERT INTO Patients(full_name,age, home_address, email,phone_number,deviceId,user_type) VALUES($1,$2,$3,$4,$5,$6,$7)"
+	insert_query := "INSERT INTO Users(full_name,age, home_address, email,phone_number,deviceId,user_type) VALUES($1,$2,$3,$4,$5,$6,$7)"
 
 	_,err = handlerconn.Db.Exec(insert_query,req.Fullname,req.Age, req.Home_address,req.Email_address,req.Phone_num,req.DeviceId,"Patient")
 

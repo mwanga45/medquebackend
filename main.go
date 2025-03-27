@@ -18,7 +18,7 @@ func main() {
 	// r.HandleFunc("/register",authentic.Reg_authentic)
 	r.HandleFunc("/register", authentic.Handler).Methods("POST")
 	r.HandleFunc("/doctorinfo", api.Doctors).Methods("GET")
-	r.HandleFunc("/userinfo", api.Userdetails).Methods("OPTIONS")
+	r.HandleFunc("/userinfo", api.Userdetails).Methods("POST")
 	r.HandleFunc("/chatbot",handler_chat.Chatbot).Methods("POST")
 
 	// call function connectionpool

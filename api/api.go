@@ -101,19 +101,20 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check if the deviceId is Available for this
-	query := "SELECT full_name, email , home_address, age, phone_number, Age FROM Users WHERE deviceId = $1"
+	query := "SELECT full_name,email,home_address,phone_number,Age FROM Users WHERE deviceId = $1"
 	var dvId DeviceUid
 	err := json.NewDecoder(r.Body).Decode(&dvId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 	var details User_details
 	err = handlerconn.Db.QueryRow(query, dvId.DeviceId).Scan(&details.Name,&details.Email,&details.Home_address,&details.Phone_num,&details.Age)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Fatal("Failed to fetch value")
+		log.Println("Failed to fetch value")
+		return
 	}
    w.Header().Set("Content-Type", "application/json")
    err = json.NewEncoder(w).Encode(Response{

@@ -45,25 +45,25 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(doctor_tb); err != nil {
 		log.Fatalf("failed to create new table %v", err)
 	}
-	query_test := `INSERT INTO doctors (
-		full_name,
-		specialty,
-		years_experience,
-		department,
-		phone_number,
-		email,
-		availability,
-		room_number,
-		profile_picture,
-		consultation_fee
-	  )
-	  VALUES
-		('Dr. John Doe', 'Cardiology', 15, 'Cardiology', '123-456-7890', 'johndoe@example.com', 'Mon-Fri 9AM-5PM', '101', 'https://example.com/images/johndoe.jpg', 150.00),
-		('Dr. Jane Smith', 'Neurology', 12, 'Neurology', '987-654-3210', 'janesmith@example.com', 'Mon-Fri 8AM-4PM', '102', 'https://example.com/images/janesmith.jpg', 200.00),
-		('Dr. Emily Davis', 'Pediatrics', 8, 'Pediatrics', '555-123-4567', 'emilydavis@example.com', 'Tue-Thu 10AM-6PM', '103', 'https://example.com/images/emilydavis.jpg', 100.00);`
-	  if _, err := Db.Exec(query_test);err !=nil{
-		log.Fatal("failed to insert data")
-	  }
+	// query_test := `INSERT INTO doctors (
+	// 	full_name,
+	// 	specialty,
+	// 	years_experience,
+	// 	department,
+	// 	phone_number,
+	// 	email,
+	// 	availability,
+	// 	room_number,
+	// 	profile_picture,
+	// 	consultation_fee
+	//   )
+	//   VALUES
+	// 	('Dr. John Doe', 'Cardiology', 15, 'Cardiology', '123-456-7890', 'johndoe@example.com', 'Mon-Fri 9AM-5PM', '101', 'https://example.com/images/johndoe.jpg', 150.00),
+	// 	('Dr. Jane Smith', 'Neurology', 12, 'Neurology', '987-654-3210', 'janesmith@example.com', 'Mon-Fri 8AM-4PM', '102', 'https://example.com/images/janesmith.jpg', 200.00),
+	// 	('Dr. Emily Davis', 'Pediatrics', 8, 'Pediatrics', '555-123-4567', 'emilydavis@example.com', 'Tue-Thu 10AM-6PM', '103', 'https://example.com/images/emilydavis.jpg', 100.00);`
+	//   if _, err := Db.Exec(query_test);err !=nil{
+	// 	log.Fatal("failed to insert data")
+	//   }
 
 	user_tb := `CREATE TABLE IF NOT EXISTS Users (
 		user_id  SERIAL  PRIMARY KEY ,
