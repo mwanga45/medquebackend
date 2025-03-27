@@ -25,7 +25,7 @@ type (
 		Home_address string `json:"home_address,omitempty"`
 		Age          string `json:"age"`
 	}
-	Verfiy_user struct{
+	Verfiy_user struct {
 		User_exist bool `json:"user_exist"`
 	}
 )
@@ -99,46 +99,52 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func Verifyuser(w http.ResponseWriter, r *http.Request){
-    if r.Method != http.MethodPost{
-      w.WriteHeader(http.StatusMethodNotAllowed)
-	  log.Fatal("Invalid method used")
+func Verifyuser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		log.Fatal("Invalid method used")
 	}
 	var deviceId DeviceUid
 
 	query := "SELECT deviceId FROM Users WHERE deveiceId = $1"
-
 	err := json.NewDecoder(r.Body).Decode(&deviceId)
-	if err != nil{
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			Message: "failed to decode",
 			Success: false,
 		})
 	}
-	
- var verify Verfiy_user
-   var check_deviceid string
-   err = handlerconn.Db.QueryRow(query,deviceId).Scan(&check_deviceid)
-   if err != nil {
-	if err == sql.ErrNoRows{
-		verify = Verfiy_user{User_exist: false}
+
+	var verify Verfiy_user
+	var check_deviceid string
+	err = handlerconn.Db.QueryRow(query, deviceId).Scan(&check_deviceid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			verify = Verfiy_user{User_exist: false}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(Response{
+				Message: "Not yet Registered",
+				Success: false,
+				Data:    verify,
+			})
+
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+	} else {
+		verify = Verfiy_user{User_exist: true}
 	}
-	w.WriteHeader(http.StatusInternalServerError)
-	return
-   }else{
-	verify = Verfiy_user{User_exist: true}
-   }
 
-   w.Header().Set("Content-Type", "application/json")
-   json.NewEncoder(w).Encode(Response{
-	Message: "success",
-	Data:verify,
-	Success: true,
-   })
-   }
-
-
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(Response{
+		Message: "success",
+		Data:    verify,
+		Success: true,
+	})
+}
 
 func Userdetails(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -155,22 +161,22 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var details User_details
-	err = handlerconn.Db.QueryRow(query, dvId.DeviceId).Scan(&details.Name,&details.Email,&details.Home_address,&details.Phone_num,&details.Age)
+	err = handlerconn.Db.QueryRow(query, dvId.DeviceId).Scan(&details.Name, &details.Email, &details.Home_address, &details.Phone_num, &details.Age)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Failed to fetch value")
 		return
 	}
-   w.Header().Set("Content-Type", "application/json")
-   err = json.NewEncoder(w).Encode(Response{
-	Message:"Successfully ",
-	Success: true,
-	Data: details,
-   })
-   if err !=nil{
-	w.WriteHeader(http.StatusInternalServerError)
-	return
-   }
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(Response{
+		Message: "Successfully ",
+		Success: true,
+		Data:    details,
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 func BookingList(w http.ResponseWriter, r *http.Request) {
 
