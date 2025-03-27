@@ -115,7 +115,14 @@ func Verifyuser(w http.ResponseWriter, r *http.Request){
 			Success: false,
 		})
 	}
-
+	
+//    var verify Verfiy_user
+   var check_deviceid string
+   err = handlerconn.Db.QueryRow(query,deviceId).Scan(&check_deviceid)
+   if err != nil {
+	w.WriteHeader(http.StatusInternalServerError)
+	return
+   }
 
 
 }
