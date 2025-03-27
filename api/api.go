@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	handlerconn "medquemod/db_conn"
@@ -116,16 +117,29 @@ func Verifyuser(w http.ResponseWriter, r *http.Request){
 		})
 	}
 	
-//    var verify Verfiy_user
+ var verify Verfiy_user
    var check_deviceid string
    err = handlerconn.Db.QueryRow(query,deviceId).Scan(&check_deviceid)
    if err != nil {
+	if err == sql.ErrNoRows{
+		verify = Verfiy_user{User_exist: false}
+	}
 	w.WriteHeader(http.StatusInternalServerError)
 	return
+   }else{
+	verify = Verfiy_user{User_exist: true}
+   }
+
+   w.Header().Set("Content-Type", "application/json")
+   json.NewEncoder(w).Encode(Response{
+	Message: "success",
+	Data:verify,
+	Success: true,
+   })
    }
 
 
-}
+
 func Userdetails(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
