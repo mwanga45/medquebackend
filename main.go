@@ -20,6 +20,7 @@ func main() {
 	r.HandleFunc("/doctorinfo", api.Doctors).Methods("GET")
 	r.HandleFunc("/userinfo", api.Userdetails).Methods("POST")
 	r.HandleFunc("/chatbot",handler_chat.Chatbot).Methods("POST")
+	r.HandleFunc("/verifyuser",api.Verifyuser).Methods("POST")
 
 	// call function connectionpool
 	const conn_string = "user=postgres dbname=medque password=lynx host=localhost sslmode=disable"

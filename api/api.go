@@ -84,7 +84,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("content-type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(Response{
 		Message: "successfuly fetch data",
 		Success: true,
@@ -102,11 +102,11 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 func Verifyuser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		log.Fatal("Invalid method used")
+		log.Println("Invalid method used")
+		return
 	}
 	var deviceId DeviceUid
-
-	query := "SELECT deviceId FROM Users WHERE deveiceId = $1"
+	query := "SELECT deviceId FROM Users WHERE deviceId = $1"
 	err := json.NewDecoder(r.Body).Decode(&deviceId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -114,30 +114,27 @@ func Verifyuser(w http.ResponseWriter, r *http.Request) {
 			Message: "failed to decode",
 			Success: false,
 		})
+		return
 	}
-
 	var verify Verfiy_user
 	var check_deviceid string
-	err = handlerconn.Db.QueryRow(query, deviceId).Scan(&check_deviceid)
+	err = handlerconn.Db.QueryRow(query,deviceId.DeviceId).Scan(&check_deviceid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			verify = Verfiy_user{User_exist: false}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(Response{
 				Message: "Not yet Registered",
-				Success: false,
+				Success: true,
 				Data:    verify,
 			})
-
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
 	} else {
 		verify = Verfiy_user{User_exist: true}
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(Response{
 		Message: "success",
