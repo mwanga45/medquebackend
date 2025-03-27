@@ -24,6 +24,9 @@ type (
 		Home_address string `json:"home_address,omitempty"`
 		Age          string `json:"age"`
 	}
+	Verfiy_user struct{
+		User_exist bool `json:"user_exist"`
+	}
 )
 
 func Doctors(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +97,27 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+}
+func Verifyuser(w http.ResponseWriter, r *http.Request){
+    if r.Method != http.MethodPost{
+      w.WriteHeader(http.StatusMethodNotAllowed)
+	  log.Fatal("Invalid method used")
+	}
+	var deviceId DeviceUid
+
+	query := "SELECT deviceId FROM Users WHERE deveiceId = $1"
+
+	err := json.NewDecoder(r.Body).Decode(&deviceId)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "failed to decode",
+			Success: false,
+		})
+	}
+
+
+
 }
 func Userdetails(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
