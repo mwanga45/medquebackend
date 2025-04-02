@@ -25,7 +25,7 @@ type Staffdetatails struct {
 	Email        string       `json:"email"`
 	Home_address Home_address `json:"home_address"`
 }
-  const secretekey = []btyes("secretekey")
+    var secretekey = []byte("secretekey")
 func Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -62,17 +62,17 @@ func Login(w http.ResponseWriter, r *http.Request) {
    
 }
 
-func CreateToken(Username string , Passoword string) (string error){
-	token := jwt.NewWithClaims(jwt.SigningClamsHs256,jwt.NewClaims{
+func CreateToken(Username string,Password string)(string, error){
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{
 		"Username": Username,
 		"Password":Password,
 		"exp": time.Now().Add(time.Hour * 2).Unix(),
 	})
-	tokenstring , err := token.Signedstring(secretekey)
+	tokenstring,err := token.SigningString(secretekey)
 	if err != nil{
 		fmt.Println("Something went wrong",err)
 	}
-	return tokenstring, nil
+	return tokenstring,nil
 }
 
 func verifyToken()
