@@ -6,6 +6,8 @@ import (
 	"fmt"
 	handlerconn "medquemod/db_conn"
 	"net/http"
+	"github.com/golang-jwt/jwt"
+	"time"
 )
 
 type Return_Field struct {
@@ -67,4 +69,10 @@ func CreateToken(Username string , Passoword string) (string error){
 		"exp": time.Now().Add(time.Hour * 2).Unix(),
 	})
 	tokenstring , err := token.Signedstring(secretekey)
+	if err != nil{
+		fmt.Println("Something went wrong",err)
+	}
+	return tokenstring, nil
 }
+
+func verifyToken()
