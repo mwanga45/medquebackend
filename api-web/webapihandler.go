@@ -33,6 +33,9 @@ type StaffLogin struct{
 
 var secretekey = []byte("secretekey")
 
+func Registration(w http.ResponseWriter, r * http.Request){
+	
+}
 func Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -51,7 +54,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "SELECT password,username AdminTb WHERE  password = $1,username = $2 regNo =  $3"
+	query := "SELECT password,username,regNo AdminTb WHERE  password = $1,username = $2 regNo =  $3"
 	if err := handlerconn.Db.QueryRow(query, &S.Password, &S.Username, &S.Registration).Scan(&S.Password, &S.Username,&S.Registration); err != nil {
 		fmt.Println("User is username or password is wrong", err)
 		return
