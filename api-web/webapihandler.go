@@ -44,8 +44,22 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
   query := "SELECT password , username Admin WHERE  password = $1 , username = $2"
-  rows, err := handlerconn.Db.QueryRow(query,).Scan()
+  if  err := handlerconn.Db.QueryRow(query,&S.Password,&S.Username).Scan(&S.Password,&S.Username); err != nil{
+      fmt.Println("User is username or password is wrong", err)
+	  return
+   }else{
+	fmt.Println("Something went wrong here", err)
+   }
+   w.Header().Set("Content-Type", "application/json")
+   if err := json.NewEncoder(w).Encode(Return_Field{
+	Data: S,
+	Message: "Success full Login",
+   }); err != nil{
+     fmt.Println("Something went wrong", err)
+   }
+   
 }
+
 func CreateToken(Username string , Passoword string) (string error){
 	token := jwt.NewWithClaims(jwt.SigningClamsHs256,jwt.NewClaims{
 		"Username": Username,
