@@ -4,11 +4,10 @@ import (
 	// "fmt"
 	"encoding/json"
 	"fmt"
+	"github.com/golang-jwt/jwt"
 	handlerconn "medquemod/db_conn"
 	"net/http"
 	"time"
-	"github.com/golang-jwt/jwt"
-
 )
 
 type Return_Field struct {
@@ -26,7 +25,9 @@ type Staffdetatails struct {
 	Email        string       `json:"email"`
 	Home_address Home_address `json:"home_address"`
 }
-    var secretekey = []byte("secretekey")
+
+var secretekey = []byte("secretekey")
+
 func Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -37,54 +38,59 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var S Staffdetatails
-	if err := json.NewDecoder(r.Body).Decode(&S); err != nil{
+	if err := json.NewDecoder(r.Body).Decode(&S); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Return_Field{
 			Message: "Something went wrong in  system",
 		})
-		fmt.Println("Something went wrong here",err)
-		return 
+		fmt.Println("Something went wrong here", err)
+		return
 	}
 
-  query := "SELECT password , username Admin WHERE  password = $1 , username = $2"
-  if  err := handlerconn.Db.QueryRow(query,&S.Password,&S.Username).Scan(&S.Password,&S.Username); err != nil{
-      fmt.Println("User is username or password is wrong", err)
-	  return
-   }else{
-	fmt.Println("Something went wrong here", err)
-   }
-   w.Header().Set("Content-Type", "application/json")
-   if err := json.NewEncoder(w).Encode(Return_Field{
-	Data: S,
-	Message: "Success full Login",
-   }); err != nil{
-     fmt.Println("Something went wrong", err)
-   }
-   
+	query := "SELECT password,username AdminTb WHERE  password = $1,username = $2"
+	if err := handlerconn.Db.QueryRow(query, &S.Password, &S.Username).Scan(&S.Password, &S.Username); err != nil {
+		fmt.Println("User is username or password is wrong", err)
+		return
+	} else {
+		token, err := CreateToken(S.Username, S.Password)
+		if err != nil {
+			fmt.Println("Something went wrong", err)
+		}
+		fmt.Println(token)
+		w.WriteHeader(http.StatusOK)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(Return_Field{
+		Data:    S,
+		Message: "Success full Login",
+	}); err != nil {
+		fmt.Println("Something went wrong", err)
+	}
+
 }
 
-func CreateToken(Username string,Password string)(string, error){
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{
+func CreateToken(Username string, Password string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"Username": Username,
-		"Password":Password,
-		"exp": time.Now().Add(time.Hour * 2).Unix(),
+		"Password": Password,
+		"exp":      time.Now().Add(time.Hour * 2).Unix(),
 	})
-	tokenstring,err := token.SignedString(secretekey)
-	if err != nil{
-		fmt.Println("Something went wrong",err)
-		return "",err
+	tokenstring, err := token.SignedString(secretekey)
+	if err != nil {
+		fmt.Println("Something went wrong", err)
+		return "", err
 	}
-	return tokenstring,nil
+	return tokenstring, nil
 }
-func verifyToken(tokenstring string)(error){
-	token, err := jwt.Parse(tokenstring, func(t *jwt.Token)(interface{},error){
-	   return secretekey,nil
+func VerifyToken(tokenstring string) error {
+	token, err := jwt.Parse(tokenstring, func(t *jwt.Token) (interface{}, error) {
+		return secretekey, nil
 	})
-	if err != nil{
-		fmt.Println("Something went wrong",err)
+	if err != nil {
+		fmt.Println("Something went wrong", err)
 		return err
 	}
-	if !token.Valid{
+	if !token.Valid {
 		fmt.Println("Token isnt exist")
 	}
 	return nil
