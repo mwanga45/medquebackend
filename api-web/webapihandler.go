@@ -222,21 +222,21 @@ func Check_Identification(username string, regNo string,password string,phone_nu
 
 	switch check_reg{
 	case"MHD/DKT":
-		query := "INSERT INTO Dkt_tb username,regNO,password,phone_number,email,home_address  VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+		query := "INSERT INTO Dkt_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
 			return fmt.Errorf("something went wrong: %v",err)
 		}
 		return nil
 	case "MHD/ADM":
-		query := "INSERT INTO Admin_tb username,regNO,password,phone_number,email,home_address  VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+		query := "INSERT INTO Admin_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2,$3,$4,$5,$6)"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
 			return fmt.Errorf("something went wrong: %v",err)
 		}
 		return nil
 	case "MHD/NRS":	
-	query := "INSERT INTO Nrs_tb username,regNO,password,phone_number,email,home_address  VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+	query := "INSERT INTO Nrs_tb (username,regNO,password,phone_number,email,home_address)  VALUES  ($1, $2,  $3, $4,$5, $6)"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
 			return fmt.Errorf("something went wrong: %v",err)
