@@ -119,9 +119,9 @@ import (
 // create structure for the login
 type (
 	StaffLogin struct {
-		Username     string `json:"username" validate:"required"`
-		Password     string `json:"password" validate:"required"`
-		Registration string `json:"registarion" validate:"required"`
+		Username string `json:"username" validate:"required"`
+		Password string `json:"password" validate:"required"`
+		RegNo    string `json:"registarion" validate:"required"`
 	}
 	// create structure for the Token
 	JwtClaims struct {
@@ -157,7 +157,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	hashedPassword, err := Check_RegNo(SL.Username, SL.Registration)
+	hashedPassword, err := Check_RegNo(SL.Username, SL.RegNo)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Respond{
@@ -174,8 +174,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	tokenstring,err := CreateToken(SL.Username)
-	if err != nil{
+	tokenstring, err := CreateToken(SL.Username)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
@@ -183,11 +183,11 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-  json.NewEncoder(w).Encode(Respond{
-	Success: true,
-	Message: "Login Successfuly",
-	Data: map[string]string{"token":tokenstring},
-  })
+	json.NewEncoder(w).Encode(Respond{
+		Success: true,
+		Message: "Login Successfuly",
+		Data:    map[string]string{"token": tokenstring},
+	})
 }
 
 // create function that will create an token for session
@@ -205,60 +205,105 @@ func CreateToken(username string) (string, error) {
 	return token.SignedString(secretekey)
 
 }
-func VerifyToken(tokenstring string)( error){
-	tokenvalid , err := jwt.Parse(tokenstring, func(t *jwt.Token) (interface{}, error) {
+func VerifyToken(tokenstring string) error {
+	tokenvalid, err := jwt.Parse(tokenstring, func(t *jwt.Token) (interface{}, error) {
 		return secretekey, nil
 	})
-	if err != nil{
+	if err != nil {
 		fmt.Println("Something went wrong")
 		return err
 	}
-	if !tokenvalid.Valid{
+	if !tokenvalid.Valid {
 		fmt.Println("Page expire")
 	}
-	return nil 
+	return nil
 
 }
-func Check_RegNo(Registration string, Username string) (string, error) {
-	// create variable that will hold the return hashpassword
-	var Hash_password string
-	// check for lenght of the Registration
-	if len(Registration) < 6 {
-		return "", fmt.Errorf("registration number too short")
+// func Check_RegNo(Registration string, Username string) (string, error) {
+// 	// create variable that will hold the return hashpassword
+// 	var hashPassword string
+// 	// check for lenght of the Registration
+// 	if len(Registration) < 7 {
+// 		return "", fmt.Errorf("registration number too short")
+// 	}
+// 	if len(Registration) >= 7 {
+// 		// select seven first character from here
+// 		check_staff := Registration[:7]
+// 		if check_staff == "MHD/ADM" {
+// 			query := "SELECT password from Admin_tb WHERE username = $1 AND regNo = $2"
+// 			err := handlerconn.Db.QueryRow(query, Registration, Username).Scan(&hashPassword)
+// 			if err != nil {
+// 				fmt.Print("User Doesnt not exist", err)
+// 				return "", err
+// 			} else {
+// 				fmt.Println("Something went wrong", err)
+// 				return "", err
+// 			}
+// 		} else if check_staff == "MDH/DKT" {
+// 			query := "SELECT password from Doc_tb WHERE username = $1 AND regNo = $2 "
+// 			err := handlerconn.Db.QueryRow(query, Username, Registration).Scan(&hashPassword)
+// 			if err != nil {
+// 				fmt.Print("User Doesnt not exist", err)
+// 				return "", err
+// 			} else {
+// 				fmt.Println("Something went wrong", err)
+// 				return "", err
+// 			}
+// 		} else if check_staff == "MHD/NRS" {
+// 			query := "SELECT password from Nurse_tb WHERE username = $1 AND regNo = $2"
+// 			err := handlerconn.Db.QueryRow(query, Registration, Username).Scan(&hashPassword)
+// 			if err != nil {
+// 				fmt.Print("User Doesnt not exist", err)
+// 				return "", err
+// 			} else {
+// 				return "", fmt.Errorf("invalid prefix used")
+// 			}
+// 		}
+// 		if len(Registration) < 7 {
+// 			return "", fmt.Errorf("registration number too short")
+// 		}
+// 	}
+// 	return hashPassword, nil
+// }
+func Check_RegNo(username string, regNo string)(string,error)  {
+	// create variable that will hold the hashpassword
+	var hashedPassword string
+
+	if len(regNo) < 7{
+		return "", fmt.Errorf("Registratio Number is too short")	
 	}
-	if len(Registration) >= 6 {
-		// select six first character from here
-		check_staff := Registration[:6]
-		if check_staff == "MHD/AD" {
-			query := "SELECT password from Admin_tb WHERE username = 1$ AND regNo = 2$"
-			if err := handlerconn.Db.QueryRow(query, Registration, Username).Scan(&Hash_password); err != nil {
-				fmt.Print("User Doesnt not exist", err)
-				return "", err
-			} else {
-				fmt.Println("Something went wrong", err)
-				return "", err
-			}
-		} else if check_staff == "MDH/DKT" {
-			query := "SELECT password from Doc_tb WHERE username = 1$ AND regNo = 2$ "
-			if err := handlerconn.Db.QueryRow(query, Username, Registration).Scan(Hash_password); err != nil {
-				fmt.Print("User Doesnt not exist", err)
-				return "", err
-			} else {
-				fmt.Println("Something went wrong", err)
-				return "", err
-			}
-		} else if check_staff == "MHD/NRS" {
-			query := "SELECT password from Nurse_tb WHERE username = 1$ AND regNo = 2$"
-			if err := handlerconn.Db.QueryRow(query, Registration, Username).Scan(&Hash_password); err != nil {
-				fmt.Print("User Doesnt not exist", err)
-				return "", err
-			} else {
-				return "", fmt.Errorf("invalid prefix used")
-			}
+//   select  first seven  character from the  regno
+	check_regno := regNo[:7]
+
+	switch check_regno{
+	case"MHD/DKT":
+		query := "SELECT password from Dkt_tb WHERE username = $1 AND regNo =$2"
+		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
+		if err != nil{
+			fmt.Println("Something went wrong here",err)
+			return "",err
 		}
-		if len(Registration) < 6 {
-			return "", fmt.Errorf("registration number too short")
+		return hashedPassword,nil
+	case "MHD/NRS":
+		query := "SELECT password from Nrs_tb WHERE username = $1 AND regNo = $2"
+		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
+		if err !=nil{
+			fmt.Println("Something went wrong",err)
+			return "",err
 		}
+		return hashedPassword,nil
+	case "MHD/ADM":
+		query := "SELECT password from Admin_tb WHERE username = $1 AND regNo = $2"
+		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
+		if err != nil{
+          fmt.Println("Something went wrong here",err)
+		  return "",err
+		}
+		return hashedPassword, nil
+
+	default:
+	return "",fmt.Errorf("Invalid Registration number ")
 	}
-	return Hash_password, nil
+	
+	
 }
