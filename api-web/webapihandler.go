@@ -13,7 +13,6 @@ import (
 
 // create structure for the login
 type (
-
 	StaffRegister struct{
 		Username string `json:"username" validate:"required"`
 		RegNo string `json:"regNo" validate:"required"`
@@ -163,3 +162,14 @@ func Check_RegNo(username string, regNo string)(string,error)  {
 	return "",fmt.Errorf("invalid registration number ")
 	}
 }
+func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Invalid Method",
+		})
+	}
+}
+// check if the staff registration Number is exist already in system
