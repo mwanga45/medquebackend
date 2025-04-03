@@ -143,5 +143,25 @@ func LoginHandler(w http.ResponseWriter, r *http.Request){
 	  })
 	  return
 	}
-	
+	// create an instance for the  StaffLogin struct
+	var SL StaffLogin
+	if err := json.NewDecoder(r.Body).Decode(&SL); err !=nil{
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Bad Request",
+		})
+	}
+
 }
+
+func Check_RegNo(Registration string,Username string)(string , error){
+	if len(Registration) >= 6{
+		check_staff := Registration[:6]
+		if  check_staff == "MHD/AD"{
+			query := "SELECT password from Admin_tb WHERE Username = 1$, RegNo = 2$"
+		}
+
+	}
+}
+
