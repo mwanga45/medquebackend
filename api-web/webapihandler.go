@@ -107,61 +107,91 @@ package apiweb
 
 import (
 	"encoding/json"
+	"fmt"
+	handlerconn "medquemod/db_conn"
 	"net/http"
 
 	"github.com/golang-jwt/jwt"
 )
 
 // create structure for the login
-type( 
-	StaffLogin struct{
-	Username  string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required"`
-	Registration string `json:"registarion" validate:"required"`
-}
-// create structure for the Token
-Claims struct{
-  Username string 
-  jwt.StandardClaims
-}
-// create  struct to return response
-Respond struct{
-	Message string `json:"message"`
-	Success bool `json:"success"`
-	Data interface{}
-}
+type (
+	StaffLogin struct {
+		Username     string `json:"username" validate:"required"`
+		Password     string `json:"password" validate:"required"`
+		Registration string `json:"registarion" validate:"required"`
+	}
+	// create structure for the Token
+	Claims struct {
+		Username string
+		jwt.StandardClaims
+	}
+	// create  struct to return response
+	Respond struct {
+		Message string `json:"message"`
+		Success bool   `json:"success"`
+		Data    interface{}
+	}
 )
 
-func LoginHandler(w http.ResponseWriter, r *http.Request){
-	w.Header().Set("Content-Type","application/json")
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method != http.MethodPost{
-      w.WriteHeader(http.StatusMethodNotAllowed)
-	  json.NewEncoder(w).Encode(Respond{
-		Success: false,
-		Message: "Invalid Method",
-	  })
-	  return
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Invalid Method",
+		})
+		return
 	}
 	// create an instance for the  StaffLogin struct
 	var SL StaffLogin
-	if err := json.NewDecoder(r.Body).Decode(&SL); err !=nil{
+	if err := json.NewDecoder(r.Body).Decode(&SL); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
 			Message: "Bad Request",
 		})
 	}
-
 }
-
-func Check_RegNo(Registration string,Username string)(string , error){
-	if len(Registration) >= 6{
+func Check_RegNo(Registration string, Username string) (string, error) {
+	// create variable that will hold the return hashpassword
+	var Hash_password string
+	if len(Registration) >= 6 {
+		// select six first character from here
 		check_staff := Registration[:6]
-		if  check_staff == "MHD/AD"{
-			query := "SELECT password from Admin_tb WHERE Username = 1$, RegNo = 2$"
+		if check_staff == "MHD/AD" {
+			query := "SELECT password from Admin_tb WHERE username = 1$, regNo = 2$"
+			if err := handlerconn.Db.QueryRow(query, Registration, Username).Scan(&Hash_password); err != nil {
+				fmt.Print("User Doesnt not exist", err)
+				return "", err
+			} else {
+				fmt.Println("Something went wrong", err)
+				return "", err
+			}
+
+		} else if check_staff == "MDH/DKT" {
+			query := "SELECT password from Doc_tb WHERE username = 1$ , regNo = 2$ "
+			if err := handlerconn.Db.QueryRow(query, Username, Registration).Scan(Hash_password); err != nil {
+				fmt.Print("User Doesnt not exist", err)
+				return "", err
+			} else {
+				fmt.Println("Something went wrong", err)
+				return "", err
+			}
+		} else if check_staff == "MHD/NRS" {
+			query := "SELECT password from Nurse_tb WHERE username = 1$, regNo = 2$"
+			if err := handlerconn.Db.QueryRow(query, Registration, Username).Scan(&Hash_password); err != nil {
+				fmt.Print("User Doesnt not exist", err)
+				return "", err
+			} else {
+				fmt.Println("Something went wrong", err)
+				return "", err
+			}
+
 		}
 
 	}
+	return Hash_password,nil
 }
-
