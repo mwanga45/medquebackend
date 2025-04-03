@@ -270,7 +270,7 @@ func Check_RegNo(username string, regNo string)(string,error)  {
 	var hashedPassword string
 
 	if len(regNo) < 7{
-		return "", fmt.Errorf("Registratio Number is too short")	
+		return "", fmt.Errorf("registratio number is too short")	
 	}
 //   select  first seven  character from the  regno
 	check_regno := regNo[:7]
@@ -280,7 +280,7 @@ func Check_RegNo(username string, regNo string)(string,error)  {
 		query := "SELECT password from Dkt_tb WHERE username = $1 AND regNo =$2"
 		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
 		if err != nil{
-			fmt.Println("Something went wrong here",err)
+			fmt.Println("Something went wrong here, or  User don`t exist",err)
 			return "",err
 		}
 		return hashedPassword,nil
@@ -288,7 +288,7 @@ func Check_RegNo(username string, regNo string)(string,error)  {
 		query := "SELECT password from Nrs_tb WHERE username = $1 AND regNo = $2"
 		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
 		if err !=nil{
-			fmt.Println("Something went wrong",err)
+			fmt.Println("Something went wrong here, or  User don`t exist",err)
 			return "",err
 		}
 		return hashedPassword,nil
@@ -296,7 +296,7 @@ func Check_RegNo(username string, regNo string)(string,error)  {
 		query := "SELECT password from Admin_tb WHERE username = $1 AND regNo = $2"
 		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
 		if err != nil{
-          fmt.Println("Something went wrong here",err)
+          fmt.Println("Something went wrong here, or  User don`t exist",err)
 		  return "",err
 		}
 		return hashedPassword, nil
