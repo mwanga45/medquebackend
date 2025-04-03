@@ -171,5 +171,23 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
 			Message: "Invalid Method",
 		})
 	}
+	var SR StaffRegister
+	err := json.NewDecoder(r.Body).Decode(&SR)
+	if err != nil{
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Failed to process request bad request",
+		})
+	}
 }
 // check if the staff registration Number is exist already in system
+func Staffexist(regNo string)(error){
+	query := "SELECT regNo from Staff_tb WHERE regNo = $1"
+	var RegNo string
+	err := handlerconn.Db.QueryRow(query,regNo).Scan(RegNo)
+	if err != nil{
+		return  fmt.Errorf("something went wrong Or user does`nt exist yet in system: %v",err)
+	}
+	return nil
+}
