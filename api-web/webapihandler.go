@@ -16,7 +16,7 @@ type (
 	StaffLogin struct {
 		Username string `json:"username" validate:"required"`
 		Password string `json:"password" validate:"required"`
-		RegNo    string `json:"registarion" validate:"required"`
+		RegNo    string `json:"registration" validate:"required"`
 	}
 	// create structure for the Token
 	JwtClaims struct {
@@ -109,7 +109,7 @@ func VerifyToken(tokenstring string) error {
 		return err
 	}
 	if !tokenvalid.Valid {
-		fmt.Println("Page expire")
+		return fmt.Errorf("page is alreadty expire")
 	}
 	return nil
 
