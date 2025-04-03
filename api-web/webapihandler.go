@@ -162,7 +162,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Message: "Failed to Sign-In Incorrect password or Username or Registration Number",
 		})
 	}
-	 if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword),SL.Password);err != nil{
+	 if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword),[]byte (SL.Password));err != nil{
         w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
