@@ -13,6 +13,15 @@ import (
 
 // create structure for the login
 type (
+
+	StaffRegister struct{
+		Username string `json:"username" validate:"required"`
+		RegNo string `json:"regNo" validate:"required"`
+		Password string `json:"password" validate:"required"`
+		Phone string `json:"phone" validate:"required"`
+		Email string `json:"email" validate:"required"`
+		Home_address string `json:"home_address" validate:"required"`
+	}
 	StaffLogin struct {
 		Username string `json:"username" validate:"required"`
 		Password string `json:"password" validate:"required"`
@@ -30,7 +39,6 @@ type (
 		Data    interface{}
 	}
 )
-
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -154,6 +162,4 @@ func Check_RegNo(username string, regNo string)(string,error)  {
 	default:
 	return "",fmt.Errorf("invalid registration number ")
 	}
-	
-	
 }
