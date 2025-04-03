@@ -302,7 +302,7 @@ func Check_RegNo(username string, regNo string)(string,error)  {
 		return hashedPassword, nil
 
 	default:
-	return "",fmt.Errorf("Invalid Registration number ")
+	return "",fmt.Errorf("invalid registration number ")
 	}
 	
 	
