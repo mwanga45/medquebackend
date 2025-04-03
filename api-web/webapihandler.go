@@ -170,6 +170,7 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
 			Success: false,
 			Message: "Invalid Method",
 		})
+		return
 	}
 	var SR StaffRegister
 	err := json.NewDecoder(r.Body).Decode(&SR)
@@ -177,9 +178,32 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
-			Message: "Failed to process request bad request",
+			Message: "bad request",
 		})
+		return
 	}
+	notExist := Staffexist(SR.RegNo)
+	if notExist != nil{
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Staff is not exist yet",
+		})
+		return
+	}
+	if errAssign := Check_Identification(SR.Username,SR.RegNo,SR.Password,SR.Phone,SR.Email,SR.Home_address);errAssign !=nil{
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Something went wrong or User isn`t exist yet in system",
+		})
+		return
+	}
+	json.NewEncoder(w).Encode(Respond{
+		Success: true,
+		Message: "Successfully registered",
+	})
+	
 }
 // check if the staff registration Number is exist already in system
 func Staffexist(regNo string)(error){
@@ -191,3 +215,35 @@ func Staffexist(regNo string)(error){
 	}
 	return nil
 }
+// check there  identification  to assign them to appropiate table
+
+func Check_Identification(username string, regNo string,password string,phone_number string, email string,home_address string)(error){
+	check_reg := regNo[:7]
+
+	switch check_reg{
+	case"MHD/DKT":
+		query := "INSERT username,regNO,password,phone_number,email,home_address INTO Dkt_tb VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
+		if err != nil{
+			return fmt.Errorf("something went wrong: %v",err)
+		}
+		return nil
+	case "MHD/ADM":
+		query := "INSERT username,regNO,password,phone_number,email,home_address INTO Admin_tb VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
+		if err != nil{
+			return fmt.Errorf("something went wrong: %v",err)
+		}
+		return nil
+	case "MHD/NRS":	
+	query := "INSERT username,regNO,password,phone_number,email,home_address INTO Nrs_tb VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
+		if err != nil{
+			return fmt.Errorf("something went wrong: %v",err)
+		}
+		return nil
+	}
+	return fmt.Errorf("something went wrong failed to proccess data")
+   
+}
+
