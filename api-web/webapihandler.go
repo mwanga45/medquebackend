@@ -153,6 +153,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Bad Request",
 		})
+		return
 	}
 	hashedPassword , err := Check_RegNo(SL.Username,SL.Registration)
 	if err !=nil{
@@ -161,6 +162,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Failed to Sign-In Incorrect password or Username or Registration Number",
 		})
+		return
 	}
 	 if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword),[]byte (SL.Password));err != nil{
         w.WriteHeader(http.StatusUnauthorized)
@@ -168,6 +170,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 			Message: "Incorrect username or Password",
 		})
+		return
 	 }
 }
 func Check_RegNo(Registration string, Username string) (string, error) {
