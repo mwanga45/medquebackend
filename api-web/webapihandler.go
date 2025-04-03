@@ -110,6 +110,7 @@ import (
 	"fmt"
 	handlerconn "medquemod/db_conn"
 	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
@@ -123,7 +124,7 @@ type (
 		Registration string `json:"registarion" validate:"required"`
 	}
 	// create structure for the Token
-	Claims struct {
+	JwtClaims struct {
 		Username string
 		jwt.StandardClaims
 	}
@@ -134,6 +135,7 @@ type (
 		Data    interface{}
 	}
 )
+
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -155,8 +157,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	hashedPassword , err := Check_RegNo(SL.Username,SL.Registration)
-	if err !=nil{
+	hashedPassword, err := Check_RegNo(SL.Username, SL.Registration)
+	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
@@ -164,14 +166,58 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	 if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword),[]byte (SL.Password));err != nil{
-        w.WriteHeader(http.StatusUnauthorized)
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(SL.Password)); err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
 			Message: "Incorrect username or Password",
 		})
 		return
-	 }
+	}
+	tokenstring,err := CreateToken(SL.Username)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Something went wrong",
+		})
+		return
+	}
+  json.NewEncoder(w).Encode(Respond{
+	Success: true,
+	Message: "Login Successfuly",
+	Data: map[string]string{"token":tokenstring},
+  })
+}
+
+// create function that will create an token for session
+var secretekey = []byte("secrete-key")
+
+func CreateToken(username string) (string, error) {
+	Claims := JwtClaims{
+		Username: username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 2).Unix(),
+			Issuer:    "medque",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims)
+	return token.SignedString(secretekey)
+
+}
+func VerifyToken(tokenstring string)( error){
+	tokenvalid , err := jwt.Parse(tokenstring, func(t *jwt.Token) (interface{}, error) {
+		return secretekey, nil
+	})
+	if err != nil{
+		fmt.Println("Something went wrong")
+		return err
+	}
+	if !tokenvalid.Valid{
+		fmt.Println("Page expire")
+	}
+	return nil 
+
 }
 func Check_RegNo(Registration string, Username string) (string, error) {
 	// create variable that will hold the return hashpassword
@@ -207,12 +253,12 @@ func Check_RegNo(Registration string, Username string) (string, error) {
 				fmt.Print("User Doesnt not exist", err)
 				return "", err
 			} else {
-				return "",fmt.Errorf("invalid prefix used")
+				return "", fmt.Errorf("invalid prefix used")
 			}
 		}
 		if len(Registration) < 6 {
 			return "", fmt.Errorf("registration number too short")
 		}
 	}
-	return Hash_password,nil
+	return Hash_password, nil
 }
