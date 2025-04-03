@@ -112,6 +112,7 @@ import (
 	"net/http"
 
 	"github.com/golang-jwt/jwt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // create structure for the login
@@ -153,6 +154,21 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Message: "Bad Request",
 		})
 	}
+	hashedPassword , err := Check_RegNo(SL.Username,SL.Registration)
+	if err !=nil{
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Failed to Sign-In Incorrect password or Username or Registration Number",
+		})
+	}
+	 if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword),SL.Password);err != nil{
+        w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(Respond{
+			Success: false,
+			Message: "Incorrect username or Password",
+		})
+	 }
 }
 func Check_RegNo(Registration string, Username string) (string, error) {
 	// create variable that will hold the return hashpassword
