@@ -209,7 +209,7 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
 func Staffexist(regNo string)(error){
 	query := "SELECT regNo from Staff_tb WHERE regNo = $1"
 	var RegNo string
-	err := handlerconn.Db.QueryRow(query,regNo).Scan(RegNo)
+	err := handlerconn.Db.QueryRow(query,regNo).Scan(&RegNo)
 	if err != nil{
 		return  fmt.Errorf("something went wrong Or user does`nt exist yet in system: %v",err)
 	}
@@ -222,21 +222,21 @@ func Check_Identification(username string, regNo string,password string,phone_nu
 
 	switch check_reg{
 	case"MHD/DKT":
-		query := "INSERT username,regNO,password,phone_number,email,home_address INTO Dkt_tb VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+		query := "INSERT INTO Dkt_tb username,regNO,password,phone_number,email,home_address  VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
 			return fmt.Errorf("something went wrong: %v",err)
 		}
 		return nil
 	case "MHD/ADM":
-		query := "INSERT username,regNO,password,phone_number,email,home_address INTO Admin_tb VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+		query := "INSERT INTO Admin_tb username,regNO,password,phone_number,email,home_address  VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
 			return fmt.Errorf("something went wrong: %v",err)
 		}
 		return nil
 	case "MHD/NRS":	
-	query := "INSERT username,regNO,password,phone_number,email,home_address INTO Nrs_tb VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
+	query := "INSERT INTO Nrs_tb username,regNO,password,phone_number,email,home_address  VALUES username = $1, regNo = $2, password = $3, phone_number =$4, email = $5,home_address = $6"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
 			return fmt.Errorf("something went wrong: %v",err)
