@@ -216,7 +216,7 @@ func Staffexist(regNo string) error {
 		return fmt.Errorf("something went wrong")
 	}
 	if !exist {
-		return fmt.Errorf("Staff not yet exist in system")
+		return fmt.Errorf("staff not yet exist in system")
 	}
 	return nil
 	
