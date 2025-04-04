@@ -223,21 +223,16 @@ func Staffexist(regNo string) error {
 
 func Check_Identification(username string, regNo string, password string, phone_number string, email string, home_address string) error {
 	check_reg := regNo[:7]
-	//  check if  user use the registarion number which is already exist in particular table
-	var check_existence string
-	check_dkt := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
-	check_nrs := "SELECT regNo FROM Nrs_tb WHERE regNo = $1"
-	check_admin := "SELECT regNo FROM admin_tb WHERE regNo = $1"
+	// hashpassword
+	hashpassword, err := bcrypt.GenerateFromPassword([]byte(password),bcrypt.DefaultCost)
+	if err != nil{
+		return fmt.Errorf("something went wrong")
+	}
+	fmt.Println(hashpassword)
+
 
 	switch check_reg {
 	case "MHD/DKT":
-		errexist := handlerconn.Db.QueryRow(check_dkt, regNo).Scan(&check_existence)
-		if errexist != nil {
-			fmt.Println("something went wrong", errexist)
-			return fmt.Errorf("something went wrong")
-		} else if errexist == sql.ErrNoRows {
-			return nil
-		}
 		query := "INSERT INTO Dkt_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)"
 		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
 		if err != nil {
@@ -245,13 +240,6 @@ func Check_Identification(username string, regNo string, password string, phone_
 		}
 		return nil
 	case "MHD/ADM":
-		errexist := handlerconn.Db.QueryRow(check_nrs, regNo).Scan(&check_existence)
-		if errexist != nil {
-			fmt.Println("Something went wrong", errexist)
-			return fmt.Errorf("something went wrong or staff already exist")
-		} else if errexist == sql.ErrNoRows {
-			return nil
-		}
 		query := "INSERT INTO Admin_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2,$3,$4,$5,$6)"
 		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
 		if err != nil {
@@ -259,11 +247,6 @@ func Check_Identification(username string, regNo string, password string, phone_
 		}
 		return nil
 	case "MHD/NRS":
-		errexist := handlerconn.Db.QueryRow(check_admin, regNo).Scan(&check_existence)
-		if errexist != nil {
-			// fmt.Println("Staff is Already exist",errexist)
-			return nil
-		}
 		query := "INSERT INTO Nrs_tb (username,regNO,password,phone_number,email,home_address)  VALUES  ($1, $2,  $3, $4,$5, $6)"
 		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
 		if err != nil {
@@ -272,5 +255,24 @@ func Check_Identification(username string, regNo string, password string, phone_
 		return nil
 	}
 	return fmt.Errorf("something went wrong failed to proccess data")
+}
 
+func handleREGprocess(table string,username string, regNo string, password string, phone_number string, email string, home_address string)error{
+	// create transaction to prevent race condition
+	tx,err := handlerconn.Db.Begin()
+	if err != nil{
+		return fmt.Errorf("something went wrong")
+	}
+	// create an bool  variable
+	var exist bool
+	query := fmt.Sprintf("SELECT EXIST(SELECT 1 FROM %s WHERE regNo = $1)",table)
+	errExist :=tx.QueryRow(query,regNo).Scan(&exist)
+	if errExist != nil {
+		return fmt.Errorf("Something went wrong",err)
+	}
+	if exist{
+		return fmt.Errorf("staff is already registered with this registration number",regNo)
+	}
+
+  return nil
 }
