@@ -1,6 +1,7 @@
 package apiweb
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	handlerconn "medquemod/db_conn"
@@ -13,12 +14,12 @@ import (
 
 // create structure for the login
 type (
-	StaffRegister struct{
-		Username string `json:"username" validate:"required"`
-		RegNo string `json:"regNo" validate:"required"`
-		Password string `json:"password" validate:"required"`
-		Phone string `json:"phone" validate:"required"`
-		Email string `json:"email" validate:"required"`
+	StaffRegister struct {
+		Username     string `json:"username" validate:"required"`
+		RegNo        string `json:"regNo" validate:"required"`
+		Password     string `json:"password" validate:"required"`
+		Phone        string `json:"phone" validate:"required"`
+		Email        string `json:"email" validate:"required"`
 		Home_address string `json:"home_address" validate:"required"`
 	}
 	StaffLogin struct {
@@ -38,6 +39,7 @@ type (
 		Data    interface{}
 	}
 )
+
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -122,49 +124,49 @@ func VerifyToken(tokenstring string) error {
 
 }
 
-func Check_RegNo(username string, regNo string)(string,error)  {
+func Check_RegNo(username string, regNo string) (string, error) {
 	// create variable that will hold the hashpassword
 	var hashedPassword string
 
-	if len(regNo) < 7{
-		return "", fmt.Errorf("registratio number is too short")	
+	if len(regNo) < 7 {
+		return "", fmt.Errorf("registratio number is too short")
 	}
-//   select  first seven  character from the  regno
+	//   select  first seven  character from the  regno
 	check_regno := regNo[:7]
 
-	switch check_regno{
-	case"MHD/DKT":
+	switch check_regno {
+	case "MHD/DKT":
 		query := "SELECT password from Dkt_tb WHERE username = $1 AND regNo =$2"
-		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
-		if err != nil{
-			fmt.Println("Something went wrong here, or  User don`t exist",err)
-			return "",err
+		err := handlerconn.Db.QueryRow(query, username, regNo).Scan(&hashedPassword)
+		if err != nil {
+			fmt.Println("Something went wrong here, or  User don`t exist", err)
+			return "", err
 		}
-		return hashedPassword,nil
+		return hashedPassword, nil
 	case "MHD/NRS":
 		query := "SELECT password from Nrs_tb WHERE username = $1 AND regNo = $2"
-		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
-		if err !=nil{
-			fmt.Println("Something went wrong here, or  User don`t exist",err)
-			return "",err
+		err := handlerconn.Db.QueryRow(query, username, regNo).Scan(&hashedPassword)
+		if err != nil {
+			fmt.Println("Something went wrong here, or  User don`t exist", err)
+			return "", err
 		}
-		return hashedPassword,nil
+		return hashedPassword, nil
 	case "MHD/ADM":
 		query := "SELECT password from Admin_tb WHERE username = $1 AND regNo = $2"
-		err := handlerconn.Db.QueryRow(query,username,regNo).Scan(&hashedPassword)
-		if err != nil{
-          fmt.Println("Something went wrong here, or  User don`t exist",err)
-		  return "",err
+		err := handlerconn.Db.QueryRow(query, username, regNo).Scan(&hashedPassword)
+		if err != nil {
+			fmt.Println("Something went wrong here, or  User don`t exist", err)
+			return "", err
 		}
 		return hashedPassword, nil
 
 	default:
-	return "",fmt.Errorf("invalid registration number ")
+		return "", fmt.Errorf("invalid registration number ")
 	}
 }
-func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
+func HandleRegisterUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method != http.MethodPost{
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
@@ -174,7 +176,7 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
 	}
 	var SR StaffRegister
 	err := json.NewDecoder(r.Body).Decode(&SR)
-	if err != nil{
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
@@ -183,7 +185,7 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	notExist := Staffexist(SR.RegNo)
-	if notExist != nil{
+	if notExist != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
@@ -191,7 +193,7 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
 		})
 		return
 	}
-	if errAssign := Check_Identification(SR.Username,SR.RegNo,SR.Password,SR.Phone,SR.Email,SR.Home_address);errAssign !=nil{
+	if errAssign := Check_Identification(SR.Username, SR.RegNo, SR.Password, SR.Phone, SR.Email, SR.Home_address); errAssign != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
@@ -203,66 +205,72 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request){
 		Success: true,
 		Message: "Successfully registered",
 	})
-	
+
 }
+
 // check if the staff registration Number is exist already in system
-func Staffexist(regNo string)(error){
+func Staffexist(regNo string) error {
 	query := "SELECT regNo from Staff_tb WHERE regNo = $1"
 	var RegNo string
-	err := handlerconn.Db.QueryRow(query,regNo).Scan(&RegNo)
-	if err != nil{
-		return  fmt.Errorf("something went wrong Or user does`nt exist yet in system: %v",err)
+	err := handlerconn.Db.QueryRow(query, regNo).Scan(&RegNo)
+	if err != nil {
+		return fmt.Errorf("something went wrong Or user does`nt exist yet in system: %v", err)
 	}
 	return nil
 }
+
 // check there  identification  to assign them to appropiate table
 
-func Check_Identification(username string, regNo string,password string,phone_number string, email string,home_address string)(error){
+func Check_Identification(username string, regNo string, password string, phone_number string, email string, home_address string) error {
 	check_reg := regNo[:7]
-    //  check if  user use the registarion number which is already exist in particular table
+	//  check if  user use the registarion number which is already exist in particular table
 	var check_existence string
 	check_dkt := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
-	check_nrs := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
-	check_admin := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
+	check_nrs := "SELECT regNo FROM Nrs_tb WHERE regNo = $1"
+	check_admin := "SELECT regNo FROM admin_tb WHERE regNo = $1"
 
-	switch check_reg{
-	case"MHD/DKT":
-		errexist := handlerconn.Db.QueryRow(check_dkt,regNo).Scan(&check_existence)
-		if errexist == nil{
-			fmt.Println("Staff is Already exist",errexist)
-			return fmt.Errorf("sorry its seems like staff already exist")
+	switch check_reg {
+	case "MHD/DKT":
+		errexist := handlerconn.Db.QueryRow(check_dkt, regNo).Scan(&check_existence)
+		if errexist != nil {
+			fmt.Println("something went wrong", errexist)
+			return fmt.Errorf("something went wrong")
+		} else if errexist == sql.ErrNoRows {
+			return nil
 		}
 		query := "INSERT INTO Dkt_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)"
-		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
-		if err != nil{
-			return fmt.Errorf("something went wrong: %v",err)
+		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
+		if err != nil {
+			return fmt.Errorf("something went wrong: %v", err)
 		}
 		return nil
 	case "MHD/ADM":
-		errexist := handlerconn.Db.QueryRow(check_nrs,regNo).Scan(&check_existence)
-		if errexist == nil{
-			fmt.Println("Staff is Already exist",errexist)
-			return fmt.Errorf("sorry its seems like staff already exist")
+		errexist := handlerconn.Db.QueryRow(check_nrs, regNo).Scan(&check_existence)
+		if errexist != nil {
+			fmt.Println("Something went wrong", errexist)
+			return fmt.Errorf("something went wrong or staff already exist")
+		} else if errexist == sql.ErrNoRows {
+			return nil
 		}
 		query := "INSERT INTO Admin_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2,$3,$4,$5,$6)"
-		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
-		if err != nil{
-			return fmt.Errorf("something went wrong: %v",err)
+		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
+		if err != nil {
+			return fmt.Errorf("something went wrong: %v", err)
 		}
 		return nil
-	case "MHD/NRS":	
-	errexist := handlerconn.Db.QueryRow(check_admin,regNo).Scan(&check_existence)
-	if errexist == nil{
-		fmt.Println("Staff is Already exist",errexist)
-		return fmt.Errorf("sorry its seems like staff already exist")
-	}
-	query := "INSERT INTO Nrs_tb (username,regNO,password,phone_number,email,home_address)  VALUES  ($1, $2,  $3, $4,$5, $6)"
-		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
-		if err != nil{
-			return fmt.Errorf("something went wrong: %v",err)
+	case "MHD/NRS":
+		errexist := handlerconn.Db.QueryRow(check_admin, regNo).Scan(&check_existence)
+		if errexist != nil {
+			// fmt.Println("Staff is Already exist",errexist)
+			return nil
+		}
+		query := "INSERT INTO Nrs_tb (username,regNO,password,phone_number,email,home_address)  VALUES  ($1, $2,  $3, $4,$5, $6)"
+		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
+		if err != nil {
+			return fmt.Errorf("something went wrong: %v", err)
 		}
 		return nil
 	}
 	return fmt.Errorf("something went wrong failed to proccess data")
-   
+
 }
