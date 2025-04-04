@@ -219,9 +219,26 @@ func Staffexist(regNo string)(error){
 
 func Check_Identification(username string, regNo string,password string,phone_number string, email string,home_address string)(error){
 	check_reg := regNo[:7]
+    //  check if  user use the registarion number which is already exist in particular table
+	var check_existence string
+	check_dkt := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
+	check_nrs := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
+	check_admin := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
+
+	errexist := handlerconn.Db.QueryRow(check_admin,regNo).Scan(&check_existence)
+	if errexist == nil{
+		fmt.Println("Staff is Already exist",errexist)
+		return fmt.Errorf("sorry its seems like staff already exist")
+	}
+
 
 	switch check_reg{
 	case"MHD/DKT":
+		errexist := handlerconn.Db.QueryRow(check_dkt,regNo).Scan(&check_existence)
+		if errexist == nil{
+			fmt.Println("Staff is Already exist",errexist)
+			return fmt.Errorf("sorry its seems like staff already exist")
+		}
 		query := "INSERT INTO Dkt_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
@@ -229,6 +246,11 @@ func Check_Identification(username string, regNo string,password string,phone_nu
 		}
 		return nil
 	case "MHD/ADM":
+		errexist := handlerconn.Db.QueryRow(check_nrs,regNo).Scan(&check_existence)
+		if errexist == nil{
+			fmt.Println("Staff is Already exist",errexist)
+			return fmt.Errorf("sorry its seems like staff already exist")
+		}
 		query := "INSERT INTO Admin_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2,$3,$4,$5,$6)"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
@@ -236,6 +258,11 @@ func Check_Identification(username string, regNo string,password string,phone_nu
 		}
 		return nil
 	case "MHD/NRS":	
+	errexist := handlerconn.Db.QueryRow(check_admin,regNo).Scan(&check_existence)
+	if errexist == nil{
+		fmt.Println("Staff is Already exist",errexist)
+		return fmt.Errorf("sorry its seems like staff already exist")
+	}
 	query := "INSERT INTO Nrs_tb (username,regNO,password,phone_number,email,home_address)  VALUES  ($1, $2,  $3, $4,$5, $6)"
 		_,err:= handlerconn.Db.Exec(query, username,regNo,password,phone_number,email,home_address)
 		if err != nil{
@@ -246,4 +273,3 @@ func Check_Identification(username string, regNo string,password string,phone_nu
 	return fmt.Errorf("something went wrong failed to proccess data")
    
 }
-
