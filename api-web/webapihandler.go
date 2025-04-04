@@ -1,7 +1,6 @@
 package apiweb
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	handlerconn "medquemod/db_conn"
@@ -210,15 +209,17 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request) {
 
 // check if the staff registration Number is exist already in system
 func Staffexist(regNo string) error {
-	query := "SELECT regNo from Staff_tb WHERE regNo = $1"
-	var RegNo string
-	err := handlerconn.Db.QueryRow(query, regNo).Scan(&RegNo)
-	if err == sql.ErrNoRows{
-		return fmt.Errorf("staff not yet exist in system")
-	}else if err != nil{
-		return fmt.Errorf("something went wrong Or user does`nt exist yet in system: %v", err)
+	query := "SELECT EXISTS(SELECT 1 from Staff_tb WHERE regNo = $1)"
+	// var RegNo string
+	var exist bool
+	if err := handlerconn.Db.QueryRow(query, regNo).Scan(&exist);err !=nil{
+		return fmt.Errorf("something went wrong")
+	}
+	if !exist {
+		return fmt.Errorf("Staff not yet exist in system")
 	}
 	return nil
+	
 }
 
 // check there  identification  to assign them to appropiate table
