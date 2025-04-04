@@ -225,13 +225,6 @@ func Check_Identification(username string, regNo string,password string,phone_nu
 	check_nrs := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
 	check_admin := "SELECT regNo FROM Dkt_tb WHERE regNo = $1"
 
-	errexist := handlerconn.Db.QueryRow(check_admin,regNo).Scan(&check_existence)
-	if errexist == nil{
-		fmt.Println("Staff is Already exist",errexist)
-		return fmt.Errorf("sorry its seems like staff already exist")
-	}
-
-
 	switch check_reg{
 	case"MHD/DKT":
 		errexist := handlerconn.Db.QueryRow(check_dkt,regNo).Scan(&check_existence)
