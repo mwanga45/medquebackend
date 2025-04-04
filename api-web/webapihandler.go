@@ -1,6 +1,7 @@
 package apiweb
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	handlerconn "medquemod/db_conn"
@@ -212,7 +213,9 @@ func Staffexist(regNo string) error {
 	query := "SELECT regNo from Staff_tb WHERE regNo = $1"
 	var RegNo string
 	err := handlerconn.Db.QueryRow(query, regNo).Scan(&RegNo)
-	if err != nil {
+	if err == sql.ErrNoRows{
+		return fmt.Errorf("staff not yet exist in system")
+	}else if err != nil{
 		return fmt.Errorf("something went wrong Or user does`nt exist yet in system: %v", err)
 	}
 	return nil
@@ -255,7 +258,7 @@ func handleREGprocess(table string,username string, regNo string,password []byte
 	defer tx.Rollback()
 	// create an bool  variable
 	var exist bool
-	query := fmt.Sprintf("SELECT EXIST(SELECT 1 FROM %s WHERE regNo = $1)",table)
+	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE regNo = $1)",table)
 	errExist :=tx.QueryRow(query,regNo).Scan(&exist)
 	if errExist != nil {
 		return fmt.Errorf("something went wrong")
