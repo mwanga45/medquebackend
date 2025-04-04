@@ -240,7 +240,7 @@ func Check_Identification(username string, regNo string, password string, phone_
 		
 		return handleREGprocess("Nrs_tb",username,regNo,hashpassword,phone_number,email,home_address)
 	default:
-		return fmt.Errorf("something went wrong here",err)
+		return fmt.Errorf("something went wrong here",)
 	}
 
 }
@@ -258,10 +258,10 @@ func handleREGprocess(table string,username string, regNo string,password []byte
 	query := fmt.Sprintf("SELECT EXIST(SELECT 1 FROM %s WHERE regNo = $1)",table)
 	errExist :=tx.QueryRow(query,regNo).Scan(&exist)
 	if errExist != nil {
-		return fmt.Errorf("Something went wrong",err)
+		return fmt.Errorf("something went wrong")
 	}
 	if exist{
-		return fmt.Errorf("staff is already registered with this registration number",regNo)
+		return fmt.Errorf("staff is already registered with this registration number")
 	}
    _, errExec := tx.Exec(fmt.Sprintf("INSERT INTO %s (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)",table),username,regNo,password,phone_number,email,home_address)
    if errExec !=nil {
