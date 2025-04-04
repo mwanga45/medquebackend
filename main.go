@@ -22,8 +22,8 @@ func main() {
 	r.HandleFunc("/userinfo", api.Userdetails).Methods("POST")
 	r.HandleFunc("/chatbot",handler_chat.Chatbot).Methods("POST")
 	r.HandleFunc("/verifyuser",api.Verifyuser).Methods("POST")
-	r.HandleFunc("/registerstaff",apiweb.HandleRegisterUser).Methods("POST")
-	r.HandleFunc("/staffsignIn",apiweb.LoginHandler).Methods("POST")
+	r.HandleFunc("/registerstaff",apiweb.HandleRegisterUser).Methods("POST") //for webapplication
+	r.HandleFunc("/staffsignIn",apiweb.LoginHandler).Methods("POST")//for webapplication
 
 	// call function connectionpool
 	const conn_string = "user=postgres dbname=medque password=lynx host=localhost sslmode=disable"
