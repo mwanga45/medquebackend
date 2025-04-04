@@ -1,7 +1,6 @@
 package apiweb
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	handlerconn "medquemod/db_conn"
@@ -233,36 +232,27 @@ func Check_Identification(username string, regNo string, password string, phone_
 
 	switch check_reg {
 	case "MHD/DKT":
-		query := "INSERT INTO Dkt_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)"
-		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
-		if err != nil {
-			return fmt.Errorf("something went wrong: %v", err)
-		}
-		return nil
+		return handleREGprocess("Dkt_tb",username,regNo,hashpassword,phone_number,email,home_address)
 	case "MHD/ADM":
-		query := "INSERT INTO Admin_tb (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2,$3,$4,$5,$6)"
-		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
-		if err != nil {
-			return fmt.Errorf("something went wrong: %v", err)
-		}
-		return nil
+		
+		return handleREGprocess("Admin_tb",username,regNo,hashpassword,phone_number,email,home_address)
 	case "MHD/NRS":
-		query := "INSERT INTO Nrs_tb (username,regNO,password,phone_number,email,home_address)  VALUES  ($1, $2,  $3, $4,$5, $6)"
-		_, err := handlerconn.Db.Exec(query, username, regNo, password, phone_number, email, home_address)
-		if err != nil {
-			return fmt.Errorf("something went wrong: %v", err)
-		}
-		return nil
+		
+		return handleREGprocess("Nrs_tb",username,regNo,hashpassword,phone_number,email,home_address)
+	default:
+		return fmt.Errorf("something went wrong here",err)
 	}
-	return fmt.Errorf("something went wrong failed to proccess data")
+
 }
 
-func handleREGprocess(table string,username string, regNo string, password string, phone_number string, email string, home_address string)error{
+func handleREGprocess(table string,username string, regNo string,password []byte, phone_number string, email string, home_address string)error{
 	// create transaction to prevent race condition
 	tx,err := handlerconn.Db.Begin()
 	if err != nil{
 		return fmt.Errorf("something went wrong")
 	}
+	// rollback the transaction 
+	defer tx.Rollback()
 	// create an bool  variable
 	var exist bool
 	query := fmt.Sprintf("SELECT EXIST(SELECT 1 FROM %s WHERE regNo = $1)",table)
@@ -273,6 +263,13 @@ func handleREGprocess(table string,username string, regNo string, password strin
 	if exist{
 		return fmt.Errorf("staff is already registered with this registration number",regNo)
 	}
-
+   _, errExec := tx.Exec(fmt.Sprintf("INSERT INTO %s (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)",table),username,regNo,password,phone_number,email,home_address)
+   if errExec !=nil {
+	return fmt.Errorf("something went wwrong here")
+   }
+   if errCommit := tx.Commit();errCommit !=nil{
+	fmt.Println("Failed to commit here",errCommit)
+	return fmt.Errorf("something went wrong here")
+   } 
   return nil
 }
