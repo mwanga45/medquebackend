@@ -209,15 +209,21 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request) {
 
 // check if the staff registration Number is exist already in system
 func Staffexist(regNo string) error {
+	tx,err := handlerconn.Db.Begin()
+	if err != nil{
+		return fmt.Errorf("something wwent wrong  here %w",err)
+	}
+	defer tx.Rollback()
 	query := "SELECT EXISTS(SELECT 1 from Staff_tb WHERE regNo = $1)"
 	// var RegNo string
 	var exist bool
-	if err := handlerconn.Db.QueryRow(query, regNo).Scan(&exist);err !=nil{
+	if err := tx.QueryRow(query, regNo).Scan(&exist);err !=nil{
 		return fmt.Errorf("something went wrong")
 	}
 	if !exist {
 		return fmt.Errorf("staff not yet exist in system")
 	}
+	tx.Commit()
 	return nil
 	
 }
