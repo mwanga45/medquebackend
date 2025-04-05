@@ -121,6 +121,16 @@ func Verifyuser(w http.ResponseWriter, r *http.Request) {
 		log.Println("Invalid method used")
 		return
 	}
+	tx,errTx := handlerconn.Db.Begin()
+	if errTx != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Transaction failed",
+			Success: true,
+		})
+		return
+	}
+	defer tx.Rollback()
 	var deviceId DeviceUid
 	query := "SELECT deviceId FROM Users WHERE deviceId = $1"
 	err := json.NewDecoder(r.Body).Decode(&deviceId)
@@ -134,7 +144,7 @@ func Verifyuser(w http.ResponseWriter, r *http.Request) {
 	}
 	var verify Verfiy_user
 	var check_deviceid string
-	err = handlerconn.Db.QueryRow(query, deviceId.DeviceId).Scan(&check_deviceid)
+	err = tx.QueryRow(query, deviceId.DeviceId).Scan(&check_deviceid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			verify = Verfiy_user{User_exist: false}
@@ -150,6 +160,14 @@ func Verifyuser(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		verify = Verfiy_user{User_exist: true}
+	}
+	if err := tx.Commit(); err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Transaction failed to commit",
+			Success: false,
+		})
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(Response{
@@ -190,10 +208,4 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-}
-func BookingList(w http.ResponseWriter, r *http.Request) {
-
-}
-func BandlebookingTime(w http.ResponseWriter, r *http.Request) {
-
 }
