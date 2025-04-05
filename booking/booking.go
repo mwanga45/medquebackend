@@ -15,6 +15,7 @@ type (
 		Department string `json:"department" validate:"required"`
 		Day        string `json:"day" validate:"required"`
 		Diseases   string `json:"desease" validate:"required"`
+		Doctor     string `json:"doctor" validate:"required"`
 	}
 )
 

@@ -39,8 +39,17 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	tx, errTx := handlerconn.Db.Begin()
+	if errTx != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Transaction Failed",
+		})
+		return
+	}
+	defer tx.Rollback()
 
-	rows, err := handlerconn.Db.Query("SELECT * FROM doctors")
+	rows, err := tx.Query("SELECT * FROM doctors")
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -83,7 +92,13 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+    if err := tx.Commit();err !=nil{
+       json.NewEncoder(w).Encode(Response{
+		Message: "Failed to commit transaction",
+		Success: false,
+	   })
+	   return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(Response{
 		Message: "successfuly fetch data",
@@ -98,6 +113,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	
 }
 func Verifyuser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -118,7 +134,7 @@ func Verifyuser(w http.ResponseWriter, r *http.Request) {
 	}
 	var verify Verfiy_user
 	var check_deviceid string
-	err = handlerconn.Db.QueryRow(query,deviceId.DeviceId).Scan(&check_deviceid)
+	err = handlerconn.Db.QueryRow(query, deviceId.DeviceId).Scan(&check_deviceid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			verify = Verfiy_user{User_exist: false}
