@@ -182,6 +182,17 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	tx,errTx := handlerconn.Db.Begin()
+	if errTx != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "transaction failed",
+			Success: false,
+		})
+		return
+	}
+    defer tx.Rollback()
+
 	// check if the deviceId is Available for this
 	query := "SELECT full_name,email,home_address,phone_number,Age,deviceId FROM Users WHERE deviceId = $1"
 	var dvId DeviceUid
@@ -192,10 +203,18 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var details User_details
-	err = handlerconn.Db.QueryRow(query, dvId.DeviceId).Scan(&details.Name, &details.Email, &details.Home_address, &details.Phone_num, &details.Age, &details.DeviceId)
+	err = tx.QueryRow(query, dvId.DeviceId).Scan(&details.Name, &details.Email, &details.Home_address, &details.Phone_num, &details.Age, &details.DeviceId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Failed to fetch value")
+		return
+	}
+    if err := tx.Commit(); err !=nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "something went wrong Transaction faild to commit",
+			Success: false,
+		})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
