@@ -26,6 +26,7 @@ type (
 		Diseases   string    `json:"desease" validate:"required"`
 		Doctor     string    `json:"doctor" validate:"required"`
 		Secretkey  string    `json:"secretekey" validate:"required"`
+		Section    string    `json:"section" validate:"required"`
 	}
 	Secretkey struct {
 		Secretkey string `json:"deviceId"`
@@ -62,15 +63,17 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	err = HandleGeust(tx, BR.Username, BR.Secretkey, BR.Time,BR.Department,BR.Day,BR.Diseases)
-	if err !=nil{
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Respond{
-			Message: "Bad request",
-			Success: false,
-		})
-	}
-	
+	if BR.Section == "Guest"{
+		err = HandleGeust(tx, BR.Username, BR.Secretkey, BR.Time, BR.Department, BR.Day, BR.Diseases)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(Respond{
+				Message: "Bad request",
+				Success: false,
+			})
+		}
+	} 
+
 }
 func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, department string, day string, diseases string) error {
 	var hashedsecretekey string
@@ -82,9 +85,9 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 	if err != nil {
 		return fmt.Errorf("wrong secretkey or username %w", err)
 	}
-	errFunc := CheckbookingRequest(Time, username)
-	if errFunc != nil {
-		return fmt.Errorf("somthing  went wrong %w", errFunc)
+	err = CheckbookingRequest(tx, Time, username)
+	if err != nil{
+		return fmt.Errorf("something went wrong here ")
 	}
 	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
 	_, err = tx.Exec(query, username, Time, department, day, diseases, secretkey)
@@ -102,12 +105,8 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 
 // }
 // This checks whether the personnel has already booked more than once—either for the same service or different ones. It also ensures thata personnel cannot make more than two bookings before completing their required medical test.
-func CheckbookingRequest(newtime time.Time, username string) error {
-	tx, errTx := handlerconn.Db.Begin()
-	defer tx.Rollback()
-	if errTx != nil {
-		return fmt.Errorf("something went wrong transaction failed:%w", errTx)
-	}
+func CheckbookingRequest(tx *sql.Tx, newtime time.Time, username string) error {
+
 	// check if person try to make more than two booking before complete one of each
 	var Countbooking int
 	err := tx.QueryRow("SELECT COUNT(*) FROM bookingList WHERE username = $1 AND status = 'processing'", username).Scan(&Countbooking)
@@ -131,9 +130,6 @@ func CheckbookingRequest(newtime time.Time, username string) error {
 	}
 	if windowCount > 0 {
 		return fmt.Errorf("your will be  allowed to make another  booking after 24hrs ")
-	}
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("something went wrong here %w", err)
 	}
 	return nil
 
