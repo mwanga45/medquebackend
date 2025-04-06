@@ -28,8 +28,8 @@ type (
 		Secretkey  string    `json:"secretekey" validate:"required"`
 		Section    string    `json:"section" validate:"required"`
 	}
-	Secretkey struct {
-		Secretkey string `json:"deviceId"`
+	DeviceId struct {
+		DeviceId string `json:"deviceId" validate:"required"`
 	}
 )
 
@@ -110,16 +110,26 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 // func Handlechild(){
 
 // }
-// func HandleshareDevice() {
-
-// }
+func HandleshareDevice(tx *sql.Tx,username string, Time time.Time,secretekey string, deviceId string)error{
+	var hashedsecretekey string
+	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1",username).Scan(&hashedsecretekey)
+	if err !=nil{
+		return fmt.Errorf("something went wrong here %w",err)
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(hashedsecretekey),[]byte(secretekey))
+	if err != nil{
+		return fmt.Errorf("something went wrong failed to proccess secretkey")
+	}
+	// 
+	
+}
 // This checks whether the personnel has already booked more than once—either for the same service or different ones. It also ensures thata personnel cannot make more than two bookings before completing their required medical test.
 func CheckbookingRequest(tx *sql.Tx, newtime time.Time, username string) error {
 	// check if person try to make more than two booking before complete one of each
 	var Countbooking int
 	err := tx.QueryRow("SELECT COUNT(*) FROM bookingList WHERE username = $1 AND status = 'processing'", username).Scan(&Countbooking)
 	if err != nil {
-		return fmt.Errorf("something went wrong failed to fetch data : %w", err)
+		return fmt.Errorf("something went wrong failed to fetch data: %w", err)
 	}
 	if Countbooking >= 2 {
 		return fmt.Errorf("booking limit reached: complete at least one medical test before booking again")
