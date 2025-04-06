@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 )
-
 type (
 	Respond struct {
 		Message string      `json:"message"`
@@ -26,7 +25,6 @@ type (
 		Secretkey string `json:"deviceId"`
 	}
 )
-
 func Booking(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -47,9 +45,7 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
-
 }
-
 func HandleGeust(username string, secretkey string, time int, department string, day string, diseases string)error {
 	tx, errTx := handlerconn.Db.Begin()
 	defer tx.Rollback()
@@ -102,15 +98,32 @@ func CheckbookingRequest(newtime time.Time, secretkey string,username string)err
 	}
 	// check if person try to make more than two booking before complete one of each
 	var Countbooking int
-	err := tx.QueryRow("SELECT username COUNT(*) WHERE username = $1",username).Scan(&Countbooking)
+	err := tx.QueryRow("SELECT COUNT(*) FORM bookingList WHERE username = $1 AND status = 'processing'",username).Scan(&Countbooking)
+	if err != nil{
+		return fmt.Errorf("something went wrong failed to fetch data : %w",err)
+	}
+	if Countbooking == 2 {
+       return fmt.Errorf("failed to make booking please complete atleast one of the medical test")
+	}
+
 	// check if personal try to make more than one booking within are day
 	WindowStart := newtime.Add(-24 * time.Hour)
 	WindowEnd := newtime.Add(24 * time.Hour)
+	var windowCount int
+	
+	query := "SELECT COUNT(*) FROM bookingList WHERE username = $1 AND time BETWEEN 2$ AND 3$"
 
+	err = tx.QueryRow(query,username,WindowStart,WindowEnd).Scan(&windowCount) 
+	if err != nil{
+		return fmt.Errorf("something went wrong %w",err)
+	}
+	if Countbooking > 0{
+		return fmt.Errorf("your will be  allowed to make another  booking after 24hrs ")
+	}
+	if err = tx.Commit();err !=nil{
+		return fmt.Errorf("something went wrong here %w",err)
+	}
+	return nil
 
-
-
-   
-    
 
 }
