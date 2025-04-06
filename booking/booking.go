@@ -71,8 +71,17 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 				Message: "Bad request",
 				Success: false,
 			})
+			return
 		}
 	} 
+	if err = tx.Commit();err !=nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Respond{
+			Message: "Transaction failed to commit",
+			Success: false,
+		})
+		return
+	}
 
 }
 func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, department string, day string, diseases string) error {
@@ -106,31 +115,27 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 // }
 // This checks whether the personnel has already booked more than once—either for the same service or different ones. It also ensures thata personnel cannot make more than two bookings before completing their required medical test.
 func CheckbookingRequest(tx *sql.Tx, newtime time.Time, username string) error {
-
 	// check if person try to make more than two booking before complete one of each
 	var Countbooking int
 	err := tx.QueryRow("SELECT COUNT(*) FROM bookingList WHERE username = $1 AND status = 'processing'", username).Scan(&Countbooking)
 	if err != nil {
 		return fmt.Errorf("something went wrong failed to fetch data : %w", err)
 	}
-	if Countbooking == 2 {
-		return fmt.Errorf("failed to make booking please complete atleast one of the medical test")
+	if Countbooking >= 2 {
+		return fmt.Errorf("booking limit reached: complete at least one medical test before booking again")
 	}
-
 	// check if personal try to make more than one booking within are day
 	WindowStart := newtime.Add(-24 * time.Hour)
 	WindowEnd := newtime.Add(24 * time.Hour)
 	var windowCount int
 
 	query := "SELECT COUNT(*) FROM bookingList WHERE username = $1 AND time BETWEEN $2 AND $3"
-
 	err = tx.QueryRow(query, username, WindowStart, WindowEnd).Scan(&windowCount)
 	if err != nil {
 		return fmt.Errorf("something went wrong %w", err)
 	}
 	if windowCount > 0 {
-		return fmt.Errorf("your will be  allowed to make another  booking after 24hrs ")
+		return fmt.Errorf("booking not allowed: you can only make one booking within a 24-hour period")
 	}
 	return nil
-
 }
