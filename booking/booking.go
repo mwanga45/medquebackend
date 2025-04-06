@@ -21,7 +21,7 @@ type (
 		Diseases   string `json:"desease" validate:"required"`
 		Doctor     string `json:"doctor" validate:"required"`
 	}
-	DeviceId struct{
+	Secretkey struct{
 		DeviceId string `json:"deviceId"`
 	}
 )
@@ -48,13 +48,14 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func handleGeust(username string, nationality string, deviceid string, time int, department string, day string, doctor string, diseases string)error {
+func HandleGeust(username string, secretkey string, time int, department string, day string, diseases string)error {
 	tx, errTx := handlerconn.Db.Begin()
+	defer tx.Rollback()
 	if errTx != nil {
 		return fmt.Errorf("something went wrong here Transaction failed: %w",errTx)
 	}
 	var idExist bool
-    err:= tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE deviceid = $1)",deviceid).Scan(&idExist)
+    err:= tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE secretkey = $1)",secretkey).Scan(&idExist)
 
 	if err !=nil{
 		return fmt.Errorf("something went wrong: %w",err)
@@ -62,7 +63,24 @@ func handleGeust(username string, nationality string, deviceid string, time int,
 	if !idExist {
 		return fmt.Errorf("user doesnt exist on system")
 	}
+    err = tx.QueryRow("SELECT  EXISTS(SELECT 1 FROM Users WHERE secretkey = $1 AND username = $2)",secretkey,username).Scan(&idExist)
+
+	if err != nil{
+		return fmt.Errorf("something went wrong here: %w",err)
+	}
+	if !idExist {
+		return fmt.Errorf("wrong username or secretkey")
+	}
 	
+	
+	query := "INSERT INTO bookingList (username,time,department,day,disease) VALUES($1,$2,$3,$4,$5)"
+	_,err = tx.Exec(query,username,time,department,day,diseases)
+	if err !=nil{
+		return fmt.Errorf("something went wrong here: %w",err)
+	}
+	if err = tx.Commit();err !=nil{
+		return fmt.Errorf("something went wrong here: %w",err)
+	}
 	return nil
 
 }
