@@ -120,8 +120,22 @@ func HandleshareDevice(tx *sql.Tx,username string, Time time.Time,secretekey str
 	if err != nil{
 		return fmt.Errorf("something went wrong failed to proccess secretkey")
 	}
-	// 
-	
+	//check if is not same user try to make request for him self
+	var matching bool
+	query := "SELECT EXISTS(SELECT 1 FROM Users username = $1 AND secretekey = $2 AND deviceId)"
+	err = tx.QueryRow(query,username,hashedsecretekey,deviceId).Scan(&matching)
+
+	if err !=nil{
+		return fmt.Errorf("failed to execute query")
+	}
+	if matching{
+       return fmt.Errorf("Bad request:You can not make your own booking using by  site is only for others: %w",err)
+	}
+	err = CheckbookingRequest(tx,Time,username)	
+	if err != nil{
+		return fmt.Errorf("something went wrong failed to validate user")
+	}
+	return nil
 }
 // This checks whether the personnel has already booked more than once—either for the same service or different ones. It also ensures thata personnel cannot make more than two bookings before completing their required medical test.
 func CheckbookingRequest(tx *sql.Tx, newtime time.Time, username string) error {
