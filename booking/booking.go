@@ -63,7 +63,7 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if BR.Section == "Guest"{
+	if BR.Section == "Guest" {
 		err = HandleGeust(tx, BR.Username, BR.Secretkey, BR.Time, BR.Department, BR.Day, BR.Diseases)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -73,8 +73,8 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-	} 
-	if err = tx.Commit();err !=nil{
+	}
+	if err = tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Respond{
 			Message: "Transaction failed to commit",
@@ -95,7 +95,7 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 		return fmt.Errorf("wrong secretkey or username %w", err)
 	}
 	err = CheckbookingRequest(tx, Time, username)
-	if err != nil{
+	if err != nil {
 		return fmt.Errorf("something went wrong here ")
 	}
 	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
@@ -110,33 +110,39 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 // func Handlechild(){
 
 // }
-func HandleshareDevice(tx *sql.Tx,username string, Time time.Time,secretekey string, deviceId string)error{
+func HandleshareDevice(tx *sql.Tx, username string, Time time.Time, secretekey string, deviceId string, department string, day string, diseases string) error {
 	var hashedsecretekey string
-	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1",username).Scan(&hashedsecretekey)
-	if err !=nil{
-		return fmt.Errorf("something went wrong here %w",err)
+	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1", username).Scan(&hashedsecretekey)
+	if err != nil {
+		return fmt.Errorf("something went wrong here %w", err)
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(hashedsecretekey),[]byte(secretekey))
-	if err != nil{
+	err = bcrypt.CompareHashAndPassword([]byte(hashedsecretekey), []byte(secretekey))
+	if err != nil {
 		return fmt.Errorf("something went wrong failed to proccess secretkey")
 	}
 	//check if is not same user try to make request for him self
 	var matching bool
 	query := "SELECT EXISTS(SELECT 1 FROM Users username = $1 AND secretekey = $2 AND deviceId)"
-	err = tx.QueryRow(query,username,hashedsecretekey,deviceId).Scan(&matching)
+	err = tx.QueryRow(query, username, hashedsecretekey, deviceId).Scan(&matching)
 
-	if err !=nil{
+	if err != nil {
 		return fmt.Errorf("failed to execute query")
 	}
-	if matching{
-       return fmt.Errorf("Bad request:You can not make your own booking using by  site is only for others: %w",err)
+	if matching {
+		return fmt.Errorf("bad request:you can not make your own booking using by  site is only for others: %w", err)
 	}
-	err = CheckbookingRequest(tx,Time,username)	
-	if err != nil{
-		return fmt.Errorf("something went wrong failed to validate user")
+	err = CheckbookingRequest(tx, Time, username)
+	if err != nil {
+		return fmt.Errorf("something went wrong failed to validate user: %w", err)
+	}
+	query = "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
+	_, err = tx.Exec(query, username, Time, department, day, diseases, secretekey)
+	if err != nil {
+		return fmt.Errorf("failed to execute query %w", err)
 	}
 	return nil
 }
+
 // This checks whether the personnel has already booked more than once—either for the same service or different ones. It also ensures thata personnel cannot make more than two bookings before completing their required medical test.
 func CheckbookingRequest(tx *sql.Tx, newtime time.Time, username string) error {
 	// check if person try to make more than two booking before complete one of each
