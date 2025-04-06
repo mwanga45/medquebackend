@@ -43,6 +43,7 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 			Message: "Something went wrong Transaction Failed",
 			Success: false,
 		})
+		return
 	}
 	defer tx.Rollback()
 
@@ -84,9 +85,23 @@ func HandleGeust(username string, secretkey string, time int, department string,
 	return nil
 
 }
-func handlechild() {
+func handlechild(){
 
 }
 func handleshareDevice() {
+
+}
+// This checks whether the personnel has already booked more than once—either for the same service or different ones. It also ensures thata personnel cannot make more than two bookings before completing their required medical test.
+ 
+func CheckbookingRequest()error{
+	tx,errTx := handlerconn.Db.Begin()
+	defer tx.Rollback()
+	if errTx !=nil{
+		return fmt.Errorf("something went wrong transaction failed:%w",errTx)
+	}
+	if errComm := tx.Commit();errComm !=nil{
+      return fmt.Errorf("something went wrong transaction failed to commit :%w", errComm)
+	}
+	
 
 }
