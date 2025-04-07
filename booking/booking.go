@@ -233,7 +233,6 @@ func Handlespecialgroup(tx *sql.Tx,  Time time.Time, department string, username
  }
 
 //  create function  to return all history available for this  patient 
-
 func ReturnAll(tx *sql.Tx,username string,secretekey string)(interface{}, error){
 	var validateuser bool
 	var hashedsecretekey string
@@ -253,6 +252,27 @@ func ReturnAll(tx *sql.Tx,username string,secretekey string)(interface{}, error)
 		return "", fmt.Errorf("user not yet exist in system")
 	}
 	 err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM boookingList WHERE username = $1 AND secretekey = $2)",username,hashedsecretekey).Scan(&validateuser)
+	 if err !=nil {
+		return "", fmt.Errorf("something went wrong failed to execute query")
+	 }
+	 if !validateuser{
+		return "No record exist yet", nil
+	 }
+	 rows,err := tx.Query("SELECT * FROM bookingList WHERE username = $1 AND secretekey = $2",username,hashedsecretekey)
+	 
+	 if err != nil {
+		return "", fmt.Errorf("failed to return booking record")
+	 }
+	//  create slice to hold the  return column 
+	var Lists   []map[string]string
+	column,_ := rows.Columns()
+    count := len(column)
+	 list := make([]interface{} ,count)
+	 ptrlist := make([]interface{},count)
+	 if rows.Next(){
+		
+
+	 }
 
 }
 
