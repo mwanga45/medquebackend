@@ -30,6 +30,10 @@ type (
 		DeviceId   string    `json:"deviceId"`
 		Age        string    `json:"age"`
 	}
+	BookingHistoryStr struct{
+		Username string `json:"username" validate:"required"`
+		Secretekey string `json:"secretekey" validate:"required"`
+	}
 )
 
 func Booking(w http.ResponseWriter, r *http.Request) {
@@ -84,9 +88,9 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if BR.Section == "Specialgroup"{
-		err = Handlespecialgroup(tx, BR.Time, BR.Department, BR.Username,BR.Secretkey,BR.Day,BR.Diseases)
-		if err !=nil{
+	if BR.Section == "Specialgroup" {
+		err = Handlespecialgroup(tx, BR.Time, BR.Department, BR.Username, BR.Secretkey, BR.Day, BR.Diseases)
+		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(Respond{
 				Message: "Failed to make booking",
@@ -108,7 +112,6 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		Message: "Successuly made booking",
 		Success: true,
 	})
-	
 
 }
 func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, department string, day string, diseases string) error {
@@ -192,88 +195,95 @@ func CheckbookingRequest(tx *sql.Tx, newtime time.Time, username string) error {
 	}
 	return nil
 }
-func Handlespecialgroup(tx *sql.Tx,  Time time.Time, department string, username string,secretekey string,day string,diseases string) error {
-	 var existuser bool
-     err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2)",username,secretekey).Scan(&existuser)
-	 if err != nil{
-		return fmt.Errorf("something went wrong here: %w",err)
-	 }
-	 if existuser{
+func Handlespecialgroup(tx *sql.Tx, Time time.Time, department string, username string, secretekey string, day string, diseases string) error {
+	var existuser bool
+	err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2)", username, secretekey).Scan(&existuser)
+	if err != nil {
+		return fmt.Errorf("something went wrong here: %w", err)
+	}
+	if existuser {
 		return fmt.Errorf("patient already exist in system")
-	 }
-	 query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
+	}
+	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
 	_, err = tx.Exec(query, username, Time, department, day, diseases, secretekey)
 	if err != nil {
 		return fmt.Errorf("failed to execute query %w", err)
 	}
 	return nil
 }
+
 // htpp request for the Historical booking list
 
- func BookingHistory(w http.ResponseWriter, r *http.Request){
-	  if r.Method != http.MethodPost{
-          w.WriteHeader(http.StatusMethodNotAllowed)
-		  json.NewEncoder(w).Encode(Respond{
+func BookingHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Respond{
 			Message: "Bad request",
 			Success: false,
-		  })
-		  return
-	  }
-	  tx,errTx := handlerconn.Db.Begin()
-	   if errTx != nil{
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Respond{
-		  Message: "Something went wrong Transaction failed begin ",
-		  Success: false,
 		})
 		return
-	   }
-	   defer tx.Rollback()
-
- }
-
-//  create function  to return all history available for this  patient 
-func ReturnAll(tx *sql.Tx,username string,secretekey string)(interface{}, error){
-	var validateuser bool
-	var hashedsecretekey string
-	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1").Scan(hashedsecretekey)
-	if err !=nil{
-		return "", fmt.Errorf("something went wrong or user isn`t exist  in system yet")
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(hashedsecretekey), []byte(secretekey))
-	if err !=nil{
-		return "", fmt.Errorf("something went wrong  username and secretekey isn`t matched")
+	tx, errTx := handlerconn.Db.Begin()
+	if errTx != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Respond{
+			Message: "Something went wrong Transaction failed begin ",
+			Success: false,
+		})
+		return
 	}
-	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2)",username,hashedsecretekey).Scan(&validateuser)
-	if err != nil{
-		return "",fmt.Errorf("something went wrong failed to excute query: %w",err)
-	}
-	if !validateuser{
-		return "", fmt.Errorf("user not yet exist in system")
-	}
-	 err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM boookingList WHERE username = $1 AND secretekey = $2)",username,hashedsecretekey).Scan(&validateuser)
-	 if err !=nil {
-		return "", fmt.Errorf("something went wrong failed to execute query")
-	 }
-	 if !validateuser{
-		return "No record exist yet", nil
-	 }
-	 rows,err := tx.Query("SELECT * FROM bookingList WHERE username = $1 AND secretekey = $2",username,hashedsecretekey)
-	 
-	 if err != nil {
-		return "", fmt.Errorf("failed to return booking record")
-	 }
-	//  create slice to hold the  return column 
-	var Lists   []map[string]string
-	column,_ := rows.Columns()
-    count := len(column)
-	 list := make([]interface{} ,count)
-	 ptrlist := make([]interface{},count)
-	 if rows.Next(){
-		
-
-	 }
+	defer tx.Rollback()
 
 }
 
+// create function  to return all history available for this  patient
+func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, error) {
+	var validateuser bool
+	var hashedsecretekey string
+	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1").Scan(hashedsecretekey)
+	if err != nil {
+		return "", fmt.Errorf("something went wrong or user isn`t exist  in system yet")
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(hashedsecretekey), []byte(secretekey))
+	if err != nil {
+		return "", fmt.Errorf("something went wrong  username and secretekey isn`t matched")
+	}
+	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2)", username, hashedsecretekey).Scan(&validateuser)
+	if err != nil {
+		return "", fmt.Errorf("something went wrong failed to excute query: %w", err)
+	}
+	if !validateuser {
+		return "", fmt.Errorf("user not yet exist in system")
+	}
+	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM boookingList WHERE username = $1 AND secretekey = $2)", username, hashedsecretekey).Scan(&validateuser)
+	if err != nil {
+		return "", fmt.Errorf("something went wrong failed to execute query")
+	}
+	if !validateuser {
+		return "No record exist yet", nil
+	}
+	rows, err := tx.Query("SELECT * FROM bookingList WHERE username = $1 AND secretekey = $2", username, hashedsecretekey)
 
+	if err != nil {
+		return "", fmt.Errorf("failed to return booking record")
+	}
+	//  create slice to hold the  return column
+	var Lists []map[string]interface{}
+	column, _ := rows.Columns()
+	count := len(column)
+	list := make([]interface{}, count)
+	ptrlist := make([]interface{}, count)
+	if rows.Next() {
+		for i := range column {
+			ptrlist[i] = &list
+		}
+		rows.Scan(ptrlist...)
+		List := make(map[string]interface{})
+		for i, col := range column {
+			val := list[i]
+			List[col] = val
+		}
+		Lists = append(Lists, List)
+	}
+	return Lists, nil
+}
