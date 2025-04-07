@@ -228,12 +228,31 @@ func Handlespecialgroup(tx *sql.Tx,  Time time.Time, department string, username
 		})
 		return
 	   }
+	   defer tx.Rollback()
 
  }
 
 //  create function  to return all history available for this  patient 
 
-func ReturnAll(tx *sql.Tx,username string,){
+func ReturnAll(tx *sql.Tx,username string,secretekey string)(interface{}, error){
+	var validateuser bool
+	var hashedsecretekey string
+	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1").Scan(hashedsecretekey)
+	if err !=nil{
+		return "", fmt.Errorf("something went wrong or user isn`t exist  in system yet")
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(hashedsecretekey), []byte(secretekey))
+	if err !=nil{
+		return "", fmt.Errorf("something went wrong  username and secretekey isn`t matched")
+	}
+	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2)",username,hashedsecretekey).Scan(&validateuser)
+	if err != nil{
+		return "",fmt.Errorf("something went wrong failed to excute query: %w",err)
+	}
+	if !validateuser{
+		return "", fmt.Errorf("user not yet exist in system")
+	}
+	 err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM boookingList WHERE username = $1 AND secretekey = $2)",username,hashedsecretekey).Scan(&validateuser)
 
 }
 
