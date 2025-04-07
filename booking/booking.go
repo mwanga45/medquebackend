@@ -84,6 +84,18 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if BR.Section == "Specialgroup"{
+		err = Handlespecialgroup(tx, BR.Time, BR.Department, BR.Username,BR.Secretkey,BR.Day,BR.Diseases)
+		if err !=nil{
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(Respond{
+				Message: "Failed to make booking",
+				Success: false,
+			})
+			return
+		}
+	}
+
 	if err = tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Respond{
@@ -92,6 +104,11 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	json.NewEncoder(w).Encode(Respond{
+		Message: "Successuly made booking",
+		Success: true,
+	})
+	
 
 }
 func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, department string, day string, diseases string) error {
@@ -175,14 +192,14 @@ func CheckbookingRequest(tx *sql.Tx, newtime time.Time, username string) error {
 	}
 	return nil
 }
-func Handlespecialgroup(tx *sql.Tx, deviceId string, Time time.Time, department string, username string,secretekey string,day string,diseases string) error {
+func Handlespecialgroup(tx *sql.Tx,  Time time.Time, department string, username string,secretekey string,day string,diseases string) error {
 	 var existuser bool
      err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2)",username,secretekey).Scan(&existuser)
 	 if err != nil{
 		return fmt.Errorf("something went wrong here: %w",err)
 	 }
 	 if existuser{
-		return fmt.Errorf("patient he/she already exist in system: %w",err)
+		return fmt.Errorf("patient already exist in system")
 	 }
 	 query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
 	_, err = tx.Exec(query, username, Time, department, day, diseases, secretekey)
