@@ -208,3 +208,33 @@ func Handlespecialgroup(tx *sql.Tx,  Time time.Time, department string, username
 	}
 	return nil
 }
+// htpp request for the Historical booking list
+
+ func BookingHistory(w http.ResponseWriter, r *http.Request){
+	  if r.Method != http.MethodPost{
+          w.WriteHeader(http.StatusMethodNotAllowed)
+		  json.NewEncoder(w).Encode(Respond{
+			Message: "Bad request",
+			Success: false,
+		  })
+		  return
+	  }
+	  tx,errTx := handlerconn.Db.Begin()
+	   if errTx != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Respond{
+		  Message: "Something went wrong Transaction failed begin ",
+		  Success: false,
+		})
+		return
+	   }
+
+ }
+
+//  create function  to return all history available for this  patient 
+
+func ReturnAll(tx *sql.Tx,username string,){
+
+}
+
+
