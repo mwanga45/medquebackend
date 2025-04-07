@@ -27,9 +27,7 @@ type (
 		Doctor     string    `json:"doctor" validate:"required"`
 		Secretkey  string    `json:"secretekey" validate:"required"`
 		Section    string    `json:"section" validate:"required"`
-	}
-	DeviceId struct {
-		DeviceId string `json:"deviceId" validate:"required"`
+		DeviceId string `json:"deviceId"`
 	}
 )
 
@@ -63,8 +61,6 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	var DVID DeviceId
-	json.NewDecoder(r.Body).Decode(&DVID)
 	if BR.Section == "Guest" {
 		err = HandleGeust(tx, BR.Username, BR.Secretkey, BR.Time, BR.Department, BR.Day, BR.Diseases)
 		if err != nil {
@@ -77,7 +73,15 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if BR.Section== "Shared"{
-		err = HandleshareDevice(tx,BR.Username,BR.Time,BR.Secretkey,DVID.DeviceId,BR.Department,BR.Day,BR.Day)
+		err = HandleshareDevice(tx,BR.Username,BR.Time,BR.Secretkey,BR.DeviceId,BR.Department,BR.Day,BR.Diseases)
+		if err !=nil{
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(Respond{
+				Message: "Invalid request",
+				Success: false,
+			})
+			return
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
