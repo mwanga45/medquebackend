@@ -23,11 +23,12 @@ type (
 		Time       time.Time `json:"time" validate:"required"`
 		Department string    `json:"department" validate:"required"`
 		Day        string    `json:"day" validate:"required"`
-		Diseases   string    `json:"desease" validate:"required"`
+		Diseases   string    `json:"disease" validate:"required"`
 		Doctor     string    `json:"doctor" validate:"required"`
 		Secretkey  string    `json:"secretekey" validate:"required"`
 		Section    string    `json:"section" validate:"required"`
-		DeviceId string `json:"deviceId"`
+		DeviceId   string    `json:"deviceId"`
+		Age        string    `json:"age"`
 	}
 )
 
@@ -72,9 +73,9 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if BR.Section== "Shared"{
-		err = HandleshareDevice(tx,BR.Username,BR.Time,BR.Secretkey,BR.DeviceId,BR.Department,BR.Day,BR.Diseases)
-		if err !=nil{
+	if BR.Section == "Shared" {
+		err = HandleshareDevice(tx, BR.Username, BR.Time, BR.Secretkey, BR.DeviceId, BR.Department, BR.Day, BR.Diseases)
+		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(Respond{
 				Message: "Invalid request",
@@ -113,10 +114,6 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 		return fmt.Errorf("something went wrong here: %w", err)
 	}
 	return nil
-
-}
-
-func Handlespecialgroup(){
 
 }
 func HandleshareDevice(tx *sql.Tx, username string, Time time.Time, secretekey string, deviceId string, department string, day string, diseases string) error {
@@ -175,6 +172,22 @@ func CheckbookingRequest(tx *sql.Tx, newtime time.Time, username string) error {
 	}
 	if windowCount > 0 {
 		return fmt.Errorf("booking not allowed: you can only make one booking within a 24-hour period")
+	}
+	return nil
+}
+func Handlespecialgroup(tx *sql.Tx, deviceId string, Time time.Time, department string, username string,secretekey string,day string,diseases string) error {
+	 var existuser bool
+     err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2)",username,secretekey).Scan(&existuser)
+	 if err != nil{
+		return fmt.Errorf("something went wrong here: %w",err)
+	 }
+	 if existuser{
+		return fmt.Errorf("patient he/she already exist in system: %w",err)
+	 }
+	 query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
+	_, err = tx.Exec(query, username, Time, department, day, diseases, secretekey)
+	if err != nil {
+		return fmt.Errorf("failed to execute query %w", err)
 	}
 	return nil
 }
