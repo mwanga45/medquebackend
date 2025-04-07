@@ -63,6 +63,8 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	var DVID DeviceId
+	json.NewDecoder(r.Body).Decode(&DVID)
 	if BR.Section == "Guest" {
 		err = HandleGeust(tx, BR.Username, BR.Secretkey, BR.Time, BR.Department, BR.Day, BR.Diseases)
 		if err != nil {
@@ -73,6 +75,9 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+	}
+	if BR.Section== "Shared"{
+		err = HandleshareDevice(tx,BR.Username,BR.Time,BR.Secretkey,DVID.DeviceId,BR.Department,BR.Day,BR.Day)
 	}
 	if err = tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -107,9 +112,9 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 
 }
 
-// func Handlechild(){
+func Handlespecialgroup(){
 
-// }
+}
 func HandleshareDevice(tx *sql.Tx, username string, Time time.Time, secretekey string, deviceId string, department string, day string, diseases string) error {
 	var hashedsecretekey string
 	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1", username).Scan(&hashedsecretekey)
@@ -122,7 +127,7 @@ func HandleshareDevice(tx *sql.Tx, username string, Time time.Time, secretekey s
 	}
 	//check if is not same user try to make request for him self
 	var matching bool
-	query := "SELECT EXISTS(SELECT 1 FROM Users username = $1 AND secretekey = $2 AND deviceId)"
+	query := "SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2 AND deviceId = $3)"
 	err = tx.QueryRow(query, username, hashedsecretekey, deviceId).Scan(&matching)
 
 	if err != nil {
