@@ -240,7 +240,7 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, error) {
 	var validateuser bool
 	var hashedsecretekey string
-	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1").Scan(hashedsecretekey)
+	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1",username).Scan(&hashedsecretekey)
 	if err != nil {
 		return "", fmt.Errorf("something went wrong or user isn`t exist  in system yet")
 	}
@@ -255,7 +255,7 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 	if !validateuser {
 		return "", fmt.Errorf("user not yet exist in system")
 	}
-	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM boookingList WHERE username = $1 AND secretekey = $2)", username, hashedsecretekey).Scan(&validateuser)
+	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM bookingList WHERE username = $1 AND secretekey = $2)", username, hashedsecretekey).Scan(&validateuser)
 	if err != nil {
 		return "", fmt.Errorf("something went wrong failed to execute query")
 	}
@@ -271,19 +271,25 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 	var Lists []map[string]interface{}
 	column, _ := rows.Columns()
 	count := len(column)
-	list := make([]interface{}, count)
-	ptrlist := make([]interface{}, count)
-	if rows.Next() {
+	for rows.Next() {
+		list := make([]interface{}, count)
+		ptrlist := make([]interface{}, count)
 		for i := range column {
-			ptrlist[i] = &list
+			ptrlist[i] = &list[i]
 		}
-		rows.Scan(ptrlist...)
+		err := rows.Scan(ptrlist...)
+		if err !=nil{
+			return "",fmt.Errorf("failed to scan rows")
+		}
 		List := make(map[string]interface{})
 		for i, col := range column {
 			val := list[i]
 			List[col] = val
 		}
 		Lists = append(Lists, List)
+	}
+	if err = rows.Err(); err != nil {
+		return "", fmt.Errorf("error during row iteration: %w", err)
 	}
 	return Lists, nil
 }
