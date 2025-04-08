@@ -7,7 +7,6 @@ import (
 	// handlerconn "medquemod/db_conn"
 	"net/http"
 )
-
 type (
 	Respond struct {
 		Message string      `json:"message"`
@@ -15,7 +14,6 @@ type (
 		Data    interface{} `json:"data"`
 	}
 )
-
 func Timelogic(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
@@ -50,17 +48,26 @@ func DayInterval() (interface{}, error) {
 	// create an  map slice to hold the date interval
 	var Timeslot []map[string]interface{}
 
+	// create an layout for date
+    layoutDate := "2/1/2006"
+	
 	// create loop iteration for the time available to make booking
 	for i := 0; i <= looptime; i++ {
 		NextTime := currentDate.AddDate(0, 0, IntervalDate)
 
 		//  create an slice to hold time slot per each iteration
 		timeslot := map[string]interface{}{
-			"From": currentDate.Format("2/1/2006"),
-			"To":   NextTime.Format("2/1/2006"),
+			"From": currentDate.Format(layoutDate),
+			"To":   NextTime.Format(layoutDate),
 		}
 		currentDate = NextTime
 		Timeslot = append(Timeslot, timeslot)
 	}
 	return Timeslot, nil
+}
+func Timeslot()(interface{},error)  {
+	currentTime := time.Now()
+	intervalMin := 10
+	endTime := 
+	
 }
