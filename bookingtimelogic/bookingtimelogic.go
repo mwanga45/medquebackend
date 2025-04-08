@@ -2,11 +2,13 @@ package bookingtimelogic
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	// handlerconn "medquemod/db_conn"
 	"net/http"
 )
+
 type (
 	Respond struct {
 		Message string      `json:"message"`
@@ -14,6 +16,7 @@ type (
 		Data    interface{} `json:"data"`
 	}
 )
+
 func Timelogic(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
@@ -49,7 +52,7 @@ func DayInterval() (interface{}, error) {
 	var Timeslot []map[string]interface{}
 
 	// create an layout for date
-    layoutDate := "2/1/2006"
+	layoutDate := "2/1/2006"
 
 	// create loop iteration for the time available to make booking
 	for i := 0; i <= looptime; i++ {
@@ -65,12 +68,22 @@ func DayInterval() (interface{}, error) {
 	}
 	return Timeslot, nil
 }
-func Timeslot()(interface{},error)  {
+func Timeslot() (interface{}, error) {
 	timelayout := "15:04"
-   startTime,_ := time.Parse(timelayout, "06:30")
-   endTime,_ := time.Parse(timelayout, "20:30")
+	startTime, errst := time.Parse(timelayout, "06:30")
 
-   now := time.Now()
-   
-	
+	if errst != nil {
+		return "", fmt.Errorf("something went wrong failed to format time")
+	}
+
+	endTime, erred := time.Parse(timelayout, "20:30")
+
+	if erred != nil {
+		return "", fmt.Errorf("something went wrong failed to format time")
+	}
+
+	now := time.Now()
+	startTime = time.Date(now.Year(), now.Month(), now.Day(), startTime.Hour(), startTime.Minute(), 0, 0, now.Location())
+	endTime = time.Date(now.Year(), now.Month(), now.Day(), endTime.Hour(), endTime.Minute(), 0, 0, now.Location())
+
 }
