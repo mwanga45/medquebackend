@@ -9,10 +9,6 @@ import (
 )
 
 type (
-	DayofToday struct {
-		Day string `json:"day" validate:"required"`
-		Date int
-	}
 	Respond struct {
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
@@ -31,6 +27,22 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
+	// return days interval 
+
+	Timeslote,err := DayInterval()
+	if err !=nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Respond{
+			Message: "Something went wrong",
+			Success: false,
+		})
+	}
+	json.NewEncoder(w).Encode(Respond{
+		Message: "successfuly",
+		Success: true,
+		Data: Timeslote,
+
+	})
 
 }
 
