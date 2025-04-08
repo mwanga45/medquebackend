@@ -69,6 +69,8 @@ func DayInterval() (interface{}, error) {
 	return Timeslot, nil
 }
 func Timeslot() (interface{}, error) {
+	// Create an slice to hold time slote
+	var Timeslote []map[string]interface{}
 	timelayout := "15:04"
 	startTime, errst := time.Parse(timelayout, "06:30")
 
@@ -85,5 +87,14 @@ func Timeslot() (interface{}, error) {
 	now := time.Now()
 	startTime = time.Date(now.Year(), now.Month(), now.Day(), startTime.Hour(), startTime.Minute(), 0, 0, now.Location())
 	endTime = time.Date(now.Year(), now.Month(), now.Day(), endTime.Hour(), endTime.Minute(), 0, 0, now.Location())
+	intervalMinutes := 10 * time.Minute
 
+	for t := startTime; t.Before(endTime); t = t.Add(intervalMinutes) {
+		// slote to carry  time slote per each iteretion
+		timeslote := map[string]interface{}{
+			"time": t.Format("03:04 PM"),
+		}
+		Timeslote = append(Timeslote, timeslote)
+	}
+	return Timeslote, nil
 }
