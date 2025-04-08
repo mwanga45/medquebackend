@@ -17,8 +17,7 @@ type (
 )
 
 func Timelogic(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Respond{
 			Message: "Bad request",
@@ -27,10 +26,10 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	// return days interval 
 
-	Timeslote,err := DayInterval()
-	if err !=nil{
+	// return days interval
+	Timeslote, err := DayInterval()
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Respond{
 			Message: "Something went wrong",
@@ -40,31 +39,28 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Respond{
 		Message: "successfuly",
 		Success: true,
-		Data: Timeslote,
-
+		Data:    Timeslote,
 	})
-
 }
-
-func DayInterval()(interface {}, error){
+func DayInterval() (interface{}, error) {
 	// create an object that will carry current time
-	currentDate  := time.Now()
+	currentDate := time.Now()
 	IntervalDate := 1
 	looptime := 4
-	// create an  map slice to hold the date interval 
-	var Timeslot []map[string]interface {}
-	// create loop iteration for the time available to make booking
+	// create an  map slice to hold the date interval
+	var Timeslot []map[string]interface{}
 
-	for i:= 0; i<=looptime; i++{
-     NextTime := currentDate.AddDate(0,0,IntervalDate)
-	//  create an slice to hold time slot per each iteration 
-	timeslot := map[string]interface{}{
-		"From":currentDate.Format("2/1/2006"),
-		"To":NextTime.Format("2/1/2006"),
-	}
-	currentDate = NextTime;
-	Timeslot = append(Timeslot, timeslot)
+	// create loop iteration for the time available to make booking
+	for i := 0; i <= looptime; i++ {
+		NextTime := currentDate.AddDate(0, 0, IntervalDate)
+
+		//  create an slice to hold time slot per each iteration
+		timeslot := map[string]interface{}{
+			"From": currentDate.Format("2/1/2006"),
+			"To":   NextTime.Format("2/1/2006"),
+		}
+		currentDate = NextTime
+		Timeslot = append(Timeslot, timeslot)
 	}
 	return Timeslot, nil
 }
-
