@@ -2,7 +2,6 @@ package bookingtimelogic
 
 import (
 	"encoding/json"
-	"strconv"
 	"time"
 
 	// handlerconn "medquemod/db_conn"
@@ -32,19 +31,10 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	// tx,errTx  := handlerconn.Db.Begin()
 
-	// if errTx != nil{
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	json.NewEncoder(w).Encode(Respond{
-	// 		Message: "something went wrong here ",
-	// 		Success: false,
-	// 	})
-	// 	return
-	// }
 }
 
-func DayInterval(){
+func DayInterval()(interface {}, error){
 	// create an object that will carry current time
 	currentDate  := time.Now()
 	IntervalDate := 1
@@ -60,8 +50,9 @@ func DayInterval(){
 		"From":currentDate.Format("2/1/2006"),
 		"To":NextTime.Format("2/1/2006"),
 	}
-	
-
+	currentDate = NextTime;
+	Timeslot = append(Timeslot, timeslot)
 	}
+	return Timeslot, nil
 }
 
