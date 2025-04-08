@@ -50,7 +50,7 @@ func DayInterval() (interface{}, error) {
 
 	// create an layout for date
     layoutDate := "2/1/2006"
-	
+
 	// create loop iteration for the time available to make booking
 	for i := 0; i <= looptime; i++ {
 		NextTime := currentDate.AddDate(0, 0, IntervalDate)
@@ -66,8 +66,11 @@ func DayInterval() (interface{}, error) {
 	return Timeslot, nil
 }
 func Timeslot()(interface{},error)  {
-	currentTime := time.Now()
-	intervalMin := 10
-	endTime := 
+	timelayout := "15:04"
+   startTime,_ := time.Parse(timelayout, "06:30")
+   endTime,_ := time.Parse(timelayout, "20:30")
+
+   now := time.Now()
+   
 	
 }
