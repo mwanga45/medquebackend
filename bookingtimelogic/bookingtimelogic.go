@@ -13,7 +13,8 @@ type (
 	Respond struct {
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
-		Data    interface{} `json:"data"`
+		Tslot   interface{} `json:"tslot"`
+		Dslot   interface{} `json:dslot`
 	}
 )
 
@@ -29,7 +30,7 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// return days interval
-	Timeslote, err := DayInterval()
+	Dayslote, err := DayInterval()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Respond{
@@ -37,10 +38,20 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 		})
 	}
+	Timeslots, err := Timeslot()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Respond{
+			Message: "Something went wrong here",
+			Success: false,
+		})
+	}
+
 	json.NewEncoder(w).Encode(Respond{
 		Message: "successfuly",
 		Success: true,
-		Data:    Timeslote,
+		Tslot:   Timeslots,
+		Dslot:   Dayslote,
 	})
 }
 func DayInterval() (interface{}, error) {
