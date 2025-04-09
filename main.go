@@ -9,7 +9,6 @@ import (
 	"medquemod/db_conn"
 	"medquemod/handleauthentic"
 	"net/http"
-
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
