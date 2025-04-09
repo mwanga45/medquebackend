@@ -14,7 +14,7 @@ type (
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
 		Tslot   interface{} `json:"tslot"`
-		Dslot   interface{} `json:dslot`
+		Dslot   interface{} `json:"dslot"`
 	}
 )
 
