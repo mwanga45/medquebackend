@@ -438,5 +438,9 @@ func SendNotification(message ExpoMessage) {
 	if err != nil{
 		log.Printf("something went wrong failed to return http request", err)
 	}
+	defer respond.Body.Close()
 
+	if respond.StatusCode != http.StatusOK{
+		log.Printf("Expo Api return non status ok ! %d", respond.StatusCode)
+	}
 }
