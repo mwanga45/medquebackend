@@ -293,3 +293,16 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 	}
 	return Lists, nil
 }
+// function to check if that time  is already been selected
+func HandlecheckTime(tx *sql.Tx, day string, time time.Time)error{
+	var exist bool
+	err := tx.QueryRow("SELECT EXIST(SELECT 1 FROM bookingList WHERE day = $1 AND $2)", day,time).Scan(&exist)
+
+	if err !=nil{
+		return fmt.Errorf("something went wrong failed to execute query %w",err)
+	}
+	if exist{
+		return fmt.Errorf("your try to make booking to exist slot")
+	}
+  return nil
+}
