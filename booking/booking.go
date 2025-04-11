@@ -99,7 +99,17 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
+	if BR.Section == "normal"{
+		err = HandleNormal(tx ,BR.Username,BR.Secretkey,BR.Time,BR.Department,BR.Day,BR.Diseases)
+		if err != nil{
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(Respond{
+				Message: "something went wrong",
+				Success: false,
+			})
+			return
+		}
+	}
 	if err = tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Respond{
@@ -112,7 +122,6 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		Message: "Successuly made booking",
 		Success: true,
 	})
-
 }
 func HandleNormal(tx *sql.Tx,username string , secretekey string, Time time.Time,department string, day string, disease string)error{
 	var hashedsecretekey string
