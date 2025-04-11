@@ -114,6 +114,34 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+func HandleNormal(tx *sql.Tx,username string , secretekey string, Time time.Time,department string, day string, disease string)error{
+	var hashedsecretekey string
+	err := tx.QueryRow("SELECT secretkey FROM Users  WHERE username = $1", username).Scan(&hashedsecretekey)
+	if err != nil {
+		return fmt.Errorf("something went wrong here:%w", err)
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(hashedsecretekey), []byte(secretekey))
+	if err != nil {
+		return fmt.Errorf("something went wrong username or secretekey not match")
+	}
+	err = CheckbookingRequest(tx, Time, username)
+	if err != nil {
+		return fmt.Errorf("something went wrong failed to validate user: %w", err)
+	}
+	err = HandlecheckTime(tx,day,Time)
+	if err != nil{
+		return fmt.Errorf("something went wrong here %w", err)
+	}
+	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
+	_, err = tx.Exec(query, username, Time, department, day, disease, hashedsecretekey)
+	if err != nil {
+		return fmt.Errorf("failed to execute query %w", err)
+	}
+	return nil
+
+
+
+}
 func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, department string, day string, diseases string) error {
 	var hashedsecretekey string
 	err := tx.QueryRow("SELECT secretkey FROM Users  WHERE username = $1", username).Scan(&hashedsecretekey)
@@ -170,7 +198,7 @@ func HandleshareDevice(tx *sql.Tx, username string, Time time.Time, secretekey s
 		return fmt.Errorf("something went wrong here %w", err)
 	}
 	query = "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
-	_, err = tx.Exec(query, username, Time, department, day, diseases, secretekey)
+	_, err = tx.Exec(query, username, Time, department, day, diseases, hashedsecretekey)
 	if err != nil {
 		return fmt.Errorf("failed to execute query %w", err)
 	}
