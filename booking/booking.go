@@ -385,62 +385,67 @@ func HandlecheckTime(tx *sql.Tx, day string, time time.Time) error {
 	return nil
 }
 
-// set notification trigger
-
 func Notification(br BookingRequest) {
-	//   calculate time before the actual meet time reached
+	// Calculate when to send the notification (10 minutes before the booking time)
 	notificationTime := br.Time.Add(-10 * time.Minute)
-
 	now := time.Now()
-	// check if the time for notification has passed or not
+
+	// If the calculated notification time has already passed, log and return.
 	if notificationTime.Before(now) {
 		log.Printf("Notification time already passed for user %s", br.Username)
 		return
-
 	}
-	// calulate delay time for send for invoke sendNotification function
+
+	// Calculate the delay until the notification should be sent.
 	delay := notificationTime.Sub(now)
 	time.AfterFunc(delay, func() {
-		var deviceId string
-		tx, err := handlerconn.Db.Begin()
-		if err != nil {
-			log.Printf("something went wrong failed to begun transaction")
-			return
-		}
+		// If the device token is not provided in the booking request, retrieve it from the database.
 		if br.DeviceId == "" {
-			query := "SELECT deviceId from Users WHERE username = $1"
-			err := tx.QueryRow(query, br.Username).Scan(&deviceId)
+			var deviceId string
+			// Directly query the database to get the device token associated with this username.
+			err := handlerconn.Db.QueryRow("SELECT deviceId FROM Users WHERE username = $1", br.Username).Scan(&deviceId)
 			if err != nil {
-				log.Printf("something went wrong failed to execute request")
+				log.Printf("Failed to retrieve device id for user %s: %v", br.Username, err)
 				return
 			}
+			br.DeviceId = deviceId
 		}
+
+		// Build the notification message using the retrieved (or provided) device token.
 		message := ExpoMessage{
-			To:    "http://192.168.17.251:8800",
-			Body:  "Your Appointment is about reach 10 minutes",
-			Title: "Remainder Appointment",
-			Sound: "Default",
+			To:    br.DeviceId, // Use the dynamic device token instead of a hard-coded value.
+			Title: "Booking Reminder",
+			Body:  fmt.Sprintf("Your booking at %s starts in 10 minutes!", br.Time.Format("3:04 PM")),
+			Sound: "default",
 		}
+
+		// Send the notification.
 		SendNotification(message)
 	})
 }
+
+// SendNotification encodes the message into JSON and sends it over HTTP.
 func SendNotification(message ExpoMessage) {
-	payload , err := json.Marshal([]ExpoMessage{message})
-	if err != nil{
-		log.Printf("something went wrong %v", err)
+	// Wrap the message in a slice to match the API's JSON format.
+	payload, err := json.Marshal([]ExpoMessage{message})
+	if err != nil {
+		log.Printf("Error marshaling notification: %v", err)
 		return
 	}
-	respond, err := http.Post(
-		"http://192.168.17.251:8800",
+
+	// Send an HTTP POST request to the Expo Push API (or your designated endpoint).
+	resp, err := http.Post(
+		"http://192.168.17.251", // Replace with the correct Expo endpoint if needed.
 		"application/json",
 		bytes.NewBuffer(payload),
 	)
-	if err != nil{
-		log.Printf("something went wrong failed to return http request", err)
+	if err != nil {
+		log.Printf("Failed to send HTTP request for notification: %v", err)
+		return
 	}
-	defer respond.Body.Close()
+	defer resp.Body.Close()
 
-	if respond.StatusCode != http.StatusOK{
-		log.Printf("Expo Api return non status ok ! %d", respond.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Expo API returned non-200 status: %d", resp.StatusCode)
 	}
 }
