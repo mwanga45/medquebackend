@@ -147,9 +147,6 @@ func HandleNormal(tx *sql.Tx,username string , secretekey string, Time time.Time
 		return fmt.Errorf("failed to execute query %w", err)
 	}
 	return nil
-
-
-
 }
 func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, department string, day string, diseases string) error {
 	var hashedsecretekey string
