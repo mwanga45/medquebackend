@@ -31,8 +31,8 @@ type (
 		DeviceId   string    `json:"deviceId"`
 		Age        string    `json:"age"`
 	}
-	BookingHistoryStr struct{
-		Username string `json:"username" validate:"required"`
+	BookingHistoryStr struct {
+		Username   string `json:"username" validate:"required"`
 		Secretekey string `json:"secretekey" validate:"required"`
 	}
 )
@@ -100,9 +100,9 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if BR.Section == "normal"{
-		err = HandleNormal(tx ,BR.Username,BR.Secretkey,BR.Time,BR.Department,BR.Day,BR.Diseases)
-		if err != nil{
+	if BR.Section == "normal" {
+		err = HandleNormal(tx, BR.Username, BR.Secretkey, BR.Time, BR.Department, BR.Day, BR.Diseases)
+		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(Respond{
 				Message: "something went wrong",
@@ -124,7 +124,7 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 	})
 }
-func HandleNormal(tx *sql.Tx,username string , secretekey string, Time time.Time,department string, day string, disease string)error{
+func HandleNormal(tx *sql.Tx, username string, secretekey string, Time time.Time, department string, day string, disease string) error {
 	var hashedsecretekey string
 	err := tx.QueryRow("SELECT secretkey FROM Users  WHERE username = $1", username).Scan(&hashedsecretekey)
 	if err != nil {
@@ -138,8 +138,8 @@ func HandleNormal(tx *sql.Tx,username string , secretekey string, Time time.Time
 	if err != nil {
 		return fmt.Errorf("something went wrong failed to validate user: %w", err)
 	}
-	err = HandlecheckTime(tx,day,Time)
-	if err != nil{
+	err = HandlecheckTime(tx, day, Time)
+	if err != nil {
 		return fmt.Errorf("something went wrong here %w", err)
 	}
 	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
@@ -163,8 +163,8 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 	if err != nil {
 		return fmt.Errorf("something went wrong here ")
 	}
-	err = HandlecheckTime(tx,day,Time)
-	if err != nil{
+	err = HandlecheckTime(tx, day, Time)
+	if err != nil {
 		return fmt.Errorf("something went wrong here %w", err)
 	}
 	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
@@ -200,8 +200,8 @@ func HandleshareDevice(tx *sql.Tx, username string, Time time.Time, secretekey s
 	if err != nil {
 		return fmt.Errorf("something went wrong failed to validate user: %w", err)
 	}
-	err = HandlecheckTime(tx,day,Time)
-	if err != nil{
+	err = HandlecheckTime(tx, day, Time)
+	if err != nil {
 		return fmt.Errorf("something went wrong here %w", err)
 	}
 	query = "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
@@ -247,8 +247,8 @@ func Handlespecialgroup(tx *sql.Tx, Time time.Time, department string, username 
 	if existuser {
 		return fmt.Errorf("patient already exist in system")
 	}
-	err = HandlecheckTime(tx,day,Time)
-	if err != nil{
+	err = HandlecheckTime(tx, day, Time)
+	if err != nil {
 		return fmt.Errorf("something went wrong here %w", err)
 	}
 	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
@@ -283,7 +283,7 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 
 	var U BookingHistoryStr
 	err := json.NewDecoder(r.Body).Decode(&U)
-	if err !=nil{
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Respond{
 			Message: "Something went wrong failed to decode",
@@ -291,8 +291,8 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-    list,err := ReturnAll(tx,U.Username, U.Secretekey)
-	if err !=nil {
+	list, err := ReturnAll(tx, U.Username, U.Secretekey)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Respond{
 			Message: "failed to return value ",
@@ -300,7 +300,7 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if err := tx.Commit();err !=nil{
+	if err := tx.Commit(); err != nil {
 		json.NewEncoder(w).Encode(Respond{
 			Message: "Something went wrong failed to commit transaction",
 			Success: false,
@@ -309,9 +309,8 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Respond{
 		Message: "Success return value",
 		Success: true,
-		Data: list,
+		Data:    list,
 	})
-
 
 }
 
@@ -319,7 +318,7 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, error) {
 	var validateuser bool
 	var hashedsecretekey string
-	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1",username).Scan(&hashedsecretekey)
+	err := tx.QueryRow("SELECT secretekey FROM Users WHERE username = $1", username).Scan(&hashedsecretekey)
 	if err != nil {
 		return "", fmt.Errorf("something went wrong or user isn`t exist  in system yet")
 	}
@@ -350,8 +349,8 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 			ptrlist[i] = &list[i]
 		}
 		err := rows.Scan(ptrlist...)
-		if err !=nil{
-			return "",fmt.Errorf("failed to scan rows")
+		if err != nil {
+			return "", fmt.Errorf("failed to scan rows")
 		}
 		List := make(map[string]interface{})
 		for i, col := range column {
@@ -365,52 +364,56 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 	}
 	return Lists, nil
 }
+
 // function to check if that time  is already been selected
-func HandlecheckTime(tx *sql.Tx, day string, time time.Time)error{
+func HandlecheckTime(tx *sql.Tx, day string, time time.Time) error {
 	var exist bool
-	err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM bookingList WHERE day = $1 AND time = $2)", day,time).Scan(&exist)
-	if err !=nil{
-		return fmt.Errorf("something went wrong failed to execute query %w",err)
+	err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM bookingList WHERE day = $1 AND time = $2)", day, time).Scan(&exist)
+	if err != nil {
+		return fmt.Errorf("something went wrong failed to execute query %w", err)
 	}
-	if exist{
+	if exist {
 		return fmt.Errorf("your try to make booking to exist slot")
 	}
-  return nil
+	return nil
 }
+
 // set notification trigger
 
-func Notification(br BookingRequest)  {
-//   calculate time before the actual meet time reached
-	notificationTime  := br.Time.Add(-10 * time.Minute)
+func Notification(br BookingRequest) {
+	//   calculate time before the actual meet time reached
+	notificationTime := br.Time.Add(-10 * time.Minute)
 
 	now := time.Now()
-	// check if the time for notification has passed or not 
-	if notificationTime.Before(now){
-		log.Fatal("Time is too soon passed ")
+	// check if the time for notification has passed or not
+	if notificationTime.Before(now) {
+		log.Printf("Notification time already passed for user %s", br.Username)
+		return
+
 	}
-	// calulate delay time for send for invoke sendNotification function 
+	// calulate delay time for send for invoke sendNotification function
 	delay := notificationTime.Sub(now)
 	time.AfterFunc(delay, func() {
 		SendNotification(br)
 	})
-	
+
 }
-func SendNotification(br BookingRequest){
+func SendNotification(br BookingRequest) {
 	var deviceId string
-	tx , err := handlerconn.Db.Begin()
-	if err != nil{
-	   log.Printf("something went wrong failed to begun transaction")
-	   return
-	}
-	if br.DeviceId == ""{
-       query := "SELECT deviceId from Users WHERE username = $1"
-	   err := tx.QueryRow(query, br.Username).Scan(&deviceId)
-	   if err !=nil{
-		log.Printf("something went wrong failed to execute request")
+	tx, err := handlerconn.Db.Begin()
+	if err != nil {
+		log.Printf("something went wrong failed to begun transaction")
 		return
-	   }
-	} 
-	 message := fmt.Sprintf("Your booking at %s is in 10 minutes.", br.Time.Format("2006-01-02 15:04"))
+	}
+	if br.DeviceId == "" {
+		query := "SELECT deviceId from Users WHERE username = $1"
+		err := tx.QueryRow(query, br.Username).Scan(&deviceId)
+		if err != nil {
+			log.Printf("something went wrong failed to execute request")
+			return
+		}
+	}
+	message := fmt.Sprintf("Your booking at %s is in 10 minutes.", br.Time.Format("2006-01-02 15:04"))
 	log.Printf("Sending notification to Device %s: %s", br.DeviceId, message)
 
 }
