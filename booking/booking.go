@@ -128,6 +128,10 @@ func HandleGeust(tx *sql.Tx, username string, secretkey string, Time time.Time, 
 	if err != nil {
 		return fmt.Errorf("something went wrong here ")
 	}
+	err = HandlecheckTime(tx,day,Time)
+	if err != nil{
+		return fmt.Errorf("something went wrong here %w", err)
+	}
 	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
 	_, err = tx.Exec(query, username, Time, department, day, diseases, secretkey)
 	if err != nil {
@@ -160,6 +164,10 @@ func HandleshareDevice(tx *sql.Tx, username string, Time time.Time, secretekey s
 	err = CheckbookingRequest(tx, Time, username)
 	if err != nil {
 		return fmt.Errorf("something went wrong failed to validate user: %w", err)
+	}
+	err = HandlecheckTime(tx,day,Time)
+	if err != nil{
+		return fmt.Errorf("something went wrong here %w", err)
 	}
 	query = "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
 	_, err = tx.Exec(query, username, Time, department, day, diseases, secretekey)
@@ -203,6 +211,10 @@ func Handlespecialgroup(tx *sql.Tx, Time time.Time, department string, username 
 	}
 	if existuser {
 		return fmt.Errorf("patient already exist in system")
+	}
+	err = HandlecheckTime(tx,day,Time)
+	if err != nil{
+		return fmt.Errorf("something went wrong here %w", err)
 	}
 	query := "INSERT INTO bookingList (username,time,department,day,disease,secretekey) VALUES($1,$2,$3,$4,$5,$6)"
 	_, err = tx.Exec(query, username, Time, department, day, diseases, secretekey)
@@ -297,7 +309,6 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 func HandlecheckTime(tx *sql.Tx, day string, time time.Time)error{
 	var exist bool
 	err := tx.QueryRow("SELECT EXIST(SELECT 1 FROM bookingList WHERE day = $1 AND $2)", day,time).Scan(&exist)
-
 	if err !=nil{
 		return fmt.Errorf("something went wrong failed to execute query %w",err)
 	}
