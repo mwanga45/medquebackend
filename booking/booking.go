@@ -246,6 +246,38 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
+	var U BookingHistoryStr
+	err := json.NewDecoder(r.Body).Decode(&U)
+	if err !=nil{
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Respond{
+			Message: "Something went wrong failed to decode",
+			Success: false,
+		})
+		return
+	}
+    list,err := ReturnAll(tx,U.Username, U.Secretekey)
+	if err !=nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Respond{
+			Message: "failed to return value ",
+			Success: false,
+		})
+		return
+	}
+	if err := tx.Commit();err !=nil{
+		json.NewEncoder(w).Encode(Respond{
+			Message: "Something went wrong failed to commit transaction",
+			Success: false,
+		})
+	}
+	json.NewEncoder(w).Encode(Respond{
+		Message: "Success return value",
+		Success: true,
+		Data: list,
+	})
+
+
 }
 
 // create function  to return all history available for this  patient
@@ -260,13 +292,6 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 	if err != nil {
 		return "", fmt.Errorf("something went wrong  username and secretekey isn`t matched")
 	}
-	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM Users WHERE username = $1 AND secretekey = $2)", username, hashedsecretekey).Scan(&validateuser)
-	if err != nil {
-		return "", fmt.Errorf("something went wrong failed to excute query: %w", err)
-	}
-	if !validateuser {
-		return "", fmt.Errorf("user not yet exist in system")
-	}
 	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM bookingList WHERE username = $1 AND secretekey = $2)", username, hashedsecretekey).Scan(&validateuser)
 	if err != nil {
 		return "", fmt.Errorf("something went wrong failed to execute query")
@@ -274,7 +299,7 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 	if !validateuser {
 		return "No record exist yet", nil
 	}
-	rows, err := tx.Query("SELECT * FROM bookingList WHERE username = $1 AND secretekey = $2", username, hashedsecretekey)
+	rows, err := tx.Query("SELECT * FROM bookingList WHERE  username = $1 AND secretekey = $2 ORDER BY day", username, hashedsecretekey)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to return booking record")
@@ -308,7 +333,7 @@ func ReturnAll(tx *sql.Tx, username string, secretekey string) (interface{}, err
 // function to check if that time  is already been selected
 func HandlecheckTime(tx *sql.Tx, day string, time time.Time)error{
 	var exist bool
-	err := tx.QueryRow("SELECT EXIST(SELECT 1 FROM bookingList WHERE day = $1 AND $2)", day,time).Scan(&exist)
+	err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM bookingList WHERE day = $1 AND time = $2)", day,time).Scan(&exist)
 	if err !=nil{
 		return fmt.Errorf("something went wrong failed to execute query %w",err)
 	}
