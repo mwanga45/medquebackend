@@ -2,6 +2,7 @@ package booking
 
 // here  one device will be used to make booking to day for adult  for child  it will be almost 3 child
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -34,6 +35,12 @@ type (
 	BookingHistoryStr struct {
 		Username   string `json:"username" validate:"required"`
 		Secretekey string `json:"secretekey" validate:"required"`
+	}
+	ExpoMessage struct {
+		To    string `json:"to"`
+		Title string `json:"title"`
+		Body  string `json:"body"`
+		Sound string `json:"sound"`
 	}
 )
 
@@ -394,26 +401,42 @@ func Notification(br BookingRequest) {
 	// calulate delay time for send for invoke sendNotification function
 	delay := notificationTime.Sub(now)
 	time.AfterFunc(delay, func() {
-		SendNotification(br)
-	})
-
-}
-func SendNotification(br BookingRequest) {
-	var deviceId string
-	tx, err := handlerconn.Db.Begin()
-	if err != nil {
-		log.Printf("something went wrong failed to begun transaction")
-		return
-	}
-	if br.DeviceId == "" {
-		query := "SELECT deviceId from Users WHERE username = $1"
-		err := tx.QueryRow(query, br.Username).Scan(&deviceId)
+		var deviceId string
+		tx, err := handlerconn.Db.Begin()
 		if err != nil {
-			log.Printf("something went wrong failed to execute request")
+			log.Printf("something went wrong failed to begun transaction")
 			return
 		}
+		if br.DeviceId == "" {
+			query := "SELECT deviceId from Users WHERE username = $1"
+			err := tx.QueryRow(query, br.Username).Scan(&deviceId)
+			if err != nil {
+				log.Printf("something went wrong failed to execute request")
+				return
+			}
+		}
+		message := ExpoMessage{
+			To:    "http://192.168.17.251:8800",
+			Body:  "Your Appointment is about reach 10 minutes",
+			Title: "Remainder Appointment",
+			Sound: "Default",
+		}
+		SendNotification(message)
+	})
+}
+func SendNotification(message ExpoMessage) {
+	payload , err := json.Marshal([]ExpoMessage{message})
+	if err != nil{
+		log.Printf("something went wrong %v", err)
+		return
 	}
-	message := fmt.Sprintf("Your booking at %s is in 10 minutes.", br.Time.Format("2006-01-02 15:04"))
-	log.Printf("Sending notification to Device %s: %s", br.DeviceId, message)
+	respond, err := http.Post(
+		"http://192.168.17.251:8800",
+		"application/json",
+		bytes.NewBuffer(payload),
+	)
+	if err != nil{
+		log.Printf("something went wrong failed to return http request", err)
+	}
 
 }
