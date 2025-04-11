@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	handlerconn "medquemod/db_conn"
 	"net/http"
 	"time"
@@ -375,4 +376,22 @@ func HandlecheckTime(tx *sql.Tx, day string, time time.Time)error{
 		return fmt.Errorf("your try to make booking to exist slot")
 	}
   return nil
+}
+// set notification trigger
+
+func notification(br BookingRequest)  {
+
+	notificationTime  := br.Time.Add(-10 * time.Minute)
+
+	now := time.Now()
+
+	if notificationTime.Before(now){
+		log.Fatal("Time is too soon passed ")
+	}
+	delay := notificationTime.Sub(now)
+
+	time.AfterFunc(delay, func() {
+		
+	})
+	
 }
