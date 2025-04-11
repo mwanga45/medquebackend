@@ -109,3 +109,4 @@ func Timeslot() (interface{}, error) {
 	}
 	return Timeslote, nil
 }
+ 
