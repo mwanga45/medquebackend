@@ -379,19 +379,38 @@ func HandlecheckTime(tx *sql.Tx, day string, time time.Time)error{
 }
 // set notification trigger
 
-func notification(br BookingRequest)  {
-
+func Notification(br BookingRequest)  {
+//   calculate time before the actual meet time reached
 	notificationTime  := br.Time.Add(-10 * time.Minute)
 
 	now := time.Now()
-
+	// check if the time for notification has passed or not 
 	if notificationTime.Before(now){
 		log.Fatal("Time is too soon passed ")
 	}
+	// calulate delay time for send for invoke sendNotification function 
 	delay := notificationTime.Sub(now)
-
 	time.AfterFunc(delay, func() {
-		
+		SendNotification(br)
 	})
 	
+}
+func SendNotification(br BookingRequest){
+	var deviceId string
+	tx , err := handlerconn.Db.Begin()
+	if err != nil{
+	   log.Printf("something went wrong failed to begun transaction")
+	   return
+	}
+	if br.DeviceId == ""{
+       query := "SELECT deviceId from Users WHERE username = $1"
+	   err := tx.QueryRow(query, br.Username).Scan(&deviceId)
+	   if err !=nil{
+		log.Printf("something went wrong failed to execute request")
+		return
+	   }
+	} 
+	 message := fmt.Sprintf("Your booking at %s is in 10 minutes.", br.Time.Format("2006-01-02 15:04"))
+	log.Printf("Sending notification to Device %s: %s", br.DeviceId, message)
+
 }
