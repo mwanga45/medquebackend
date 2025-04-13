@@ -3,13 +3,14 @@ package booking
 // here  one device will be used to make booking to day for adult  for child  it will be almost 3 child
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	handlerconn "medquemod/db_conn"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -385,130 +386,202 @@ func HandlecheckTime(tx *sql.Tx, day string, time time.Time) error {
 	}
 	return nil
 }
+// SendNotification sends a push notification via Expo's API with proper error handling
+func SendNotification(message ExpoMessage) error {
+    // 1. Validate Expo token format first
+    if !isValidExpoToken(message.To) {
+        return fmt.Errorf("invalid Expo token format")
+    }
 
-// // SendNotification encodes the message into JSON and sends it over HTTP.
-func  SendNotification(message ExpoMessage) {
-	// Wrap the message in a slice to match the API's JSON format.
-	payload, err := json.Marshal([]ExpoMessage{message})
-	if err != nil {
-		log.Printf("Error marshaling notification: %v", err)
-		return
-	}
+    // 2. Marshal with proper error handling
+    payload, err := json.Marshal([]ExpoMessage{message})
+    if err != nil {
+        return fmt.Errorf("marshal error: %w", err)
+    }
 
-	// Send an HTTP POST request to the Expo Push API (or your designated endpoint).
-	resp, err := http.Post(
-		"http://192.168.17.251", // Replace with the correct Expo endpoint if needed.
-		"application/json",
-		bytes.NewBuffer(payload),
-	)
-	if err != nil {
-		log.Printf("Failed to send HTTP request for notification: %v", err)
-		return
-	}
-	defer resp.Body.Close()
+    // 3. Use correct Expo endpoint
+    resp, err := http.Post(
+        "https://exp.host/--/api/v2/push/send",
+        "application/json",
+        bytes.NewBuffer(payload),
+    )
+    if err != nil {
+        return fmt.Errorf("http error: %w", err)
+    }
+    defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Expo API returned non-200 status: %d", resp.StatusCode)
-	}
+    // 4. Check HTTP status code
+    if resp.StatusCode != http.StatusOK {
+        body, _ := io.ReadAll(resp.Body)
+        return fmt.Errorf("expo API error %d: %s", resp.StatusCode, string(body))
+    }
+
+    // 5. Parse Expo's JSON response
+    var result struct {
+        Data []struct {
+            Status  string `json:"status"`
+            ID      string `json:"id"`
+            Message string `json:"message"`
+        } `json:"data"`
+    }
+    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+        return fmt.Errorf("invalid response format: %w", err)
+    }
+
+    // 6. Validate individual message status
+    if len(result.Data) == 0 || result.Data[0].Status != "ok" {
+        return fmt.Errorf("expo rejection: %s", result.Data[0].Message)
+    }
+
+    return nil
 }
 
+// storeNotificationInDB persists notifications with proper validation
 func storeNotificationInDB(br BookingRequest) error {
-    // Always get fresh device ID from database
-    var deviceID string
+    // 1. Always get fresh device ID with NULL checking
+    var deviceID sql.NullString
     err := handlerconn.Db.QueryRow(
         "SELECT deviceId FROM Users WHERE username = $1", 
         br.Username,
     ).Scan(&deviceID)
     
     if err != nil {
-        return fmt.Errorf("user device not found: %v", err)
+        return fmt.Errorf("user query failed: %w", err)
+    }
+    if !deviceID.Valid {
+        return fmt.Errorf("no device ID registered")
     }
 
-    notificationTime := br.Time.Add(-10 * time.Minute)
+    // 2. Use UTC times for consistency
+    notificationTime := br.Time.UTC().Add(-10 * time.Minute)
+    bookingTime := br.Time.UTC()
     
+    // 3. Insert with explicit time zone
     _, err = handlerconn.Db.Exec(
         `INSERT INTO scheduled_notifications 
         (username, device_id, notification_time, booking_time)
         VALUES ($1, $2, $3, $4)`,
         br.Username,
-        deviceID,
+        deviceID.String,
         notificationTime,
-        br.Time,
+        bookingTime,
     )
     
     return err
 }
-func StartNotificationWorker(ctx context.Context) {
-    ticker := time.NewTicker(1 * time.Minute)
-    defer ticker.Stop()
 
-    for {
-        select {
-        case <-ctx.Done():
-            return
-        case <-ticker.C:
-            checkPendingNotifications()
-        }
-    }
-}
-
+// checkPendingNotifications finds due notifications with proper SQL escaping
 func checkPendingNotifications() {
-	query := "SELECT id, username, device_id, notification_time FROM scheduled_notifications WHERE status = pending AND notification_time > NOW()"
-    rows, err := handlerconn.Db.Query(query)
-    
+    // 1. Use parameterized query with proper time window
+    query := `SELECT id, username, device_id, notification_time 
+              FROM scheduled_notifications 
+              WHERE status = $1 
+              AND notification_time BETWEEN NOW() - INTERVAL '1 minute' AND NOW() + INTERVAL '1 minute'`
+              
+    rows, err := handlerconn.Db.Query(query, "pending")
     if err != nil {
-        log.Printf("Notification worker error: %v", err)
+        log.Printf("Query error: %v", err)
         return
     }
     defer rows.Close()
 
+    // 2. Process rows with error checking
     for rows.Next() {
         var (
-            id             int
-            username       string
-            deviceID       string
+            id              int
+            username        string
+            deviceID        string
             notificationTime time.Time
         )
         
         if err := rows.Scan(&id, &username, &deviceID, &notificationTime); err != nil {
+            log.Printf("Row scan error: %v", err)
             continue
         }
 
         scheduleFromDB(id, username, deviceID, notificationTime)
     }
+    
+    // 3. Check for iteration errors
+    if err = rows.Err(); err != nil {
+        log.Printf("Row iteration error: %v", err)
+    }
 }
+
+// scheduleFromDB handles notification timing with retries
 func scheduleFromDB(id int, username string, deviceID string, notificationTime time.Time) {
-    now := time.Now()
-    if notificationTime.Before(now) {
+    // 1. Convert to UTC for calculation
+    now := time.Now().UTC()
+    notificationTime = notificationTime.UTC()
+    
+    // 2. Validate notification time
+    if notificationTime.Before(now.Add(-1 * time.Minute)) {
         updateNotificationStatus(id, "expired")
         return
     }
 
+    // 3. Calculate remaining time with buffer
     delay := notificationTime.Sub(now)
+    if delay < 0 {
+        delay = 0
+    }
+
+    // 4. Schedule with retry logic
     time.AfterFunc(delay, func() {
+        const maxRetries = 3
         message := ExpoMessage{
             To:    deviceID,
             Title: "Booking Reminder",
             Body:  fmt.Sprintf("Your booking is soon!"),
         }
-        
-        if err := SendNotification(message); err == nil {
-            updateNotificationStatus(id, "delivered")
-        } else {
-            updateNotificationStatus(id, "failed")
+
+        var err error
+        for attempt := 1; attempt <= maxRetries; attempt++ {
+            err = SendNotification(message)
+            if err == nil {
+                updateNotificationStatus(id, "sent")
+                return
+            }
+            
+            // Exponential backoff
+            time.Sleep(time.Duration(attempt*2) * time.Second)
         }
+        
+        updateNotificationStatus(id, "failed")
+        log.Printf("Failed after %d attempts: %v", maxRetries, err)
     })
 }
 
+// updateNotificationStatus handles status changes with timestamp
 func updateNotificationStatus(id int, status string) {
+    // 1. Validate allowed statuses
+    validStatuses := map[string]bool{
+        "pending":   true,
+        "sent":      true,
+        "failed":    true,
+        "expired":   true,
+    }
+    if !validStatuses[status] {
+        log.Printf("Invalid status: %s", status)
+        return
+    }
+
+    // 2. Use parameterized query
     _, err := handlerconn.Db.Exec(
         `UPDATE scheduled_notifications 
-         SET status = $1, updated_at = NOW()
+         SET status = $1, updated_at = NOW() AT TIME ZONE 'UTC'
          WHERE id = $2`,
         status, id,
     )
     
     if err != nil {
-        log.Printf("Failed to update notification status: %v", err)
+        log.Printf("Update error: %v", err)
     }
+}
+
+// Helper function for Expo token validation
+func isValidExpoToken(token string) bool {
+    return strings.HasPrefix(token, "ExponentPushToken[") && 
+           strings.HasSuffix(token, "]") &&
+           len(token) > 25
 }
