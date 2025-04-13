@@ -80,15 +80,21 @@ func Connectionpool(databasesourceName string) error {
 		log.Fatalf("failed to create table patient_tb %v", err)
 	}
 
+	scheduled_notificationstb := `CREATE TABLE IF NOT EXISTS scheduled_notifications (
+		id SERIAL PRIMARY KEY,
+		username VARCHAR(255) NOT NULL,
+		device_id VARCHAR(255) NOT NULL,
+		notification_time TIMESTAMPTZ NOT NULL,
+		booking_time TIMESTAMPTZ NOT NULL,
+		status VARCHAR(20) DEFAULT 'pending',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		updated_at TIMESTAMPTZ DEFAULT NOW()
+	);`
+	if _,err = Db.Exec(scheduled_notificationstb); err != nil{
+		log.Fatalf("failed to create table sheduled notification table:%v",err)
+	}
 	return nil
 
 }
 
-// create function to terminate connection
-// func Closeconn() error {
-// 	if Db != nil {
-// 		return Db.Close()
-// 	}
-// 	return nil
 
-// }
