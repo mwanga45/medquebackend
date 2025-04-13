@@ -3,6 +3,7 @@ package booking
 // here  one device will be used to make booking to day for adult  for child  it will be almost 3 child
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -131,7 +132,7 @@ func Booking(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Respond{
 		Message: "Successuly made booking",
 		Success: true,
-	})
+	})	
 }
 func HandleNormal(tx *sql.Tx, username string, secretekey string, Time time.Time, department string, day string, disease string) error {
 	var hashedsecretekey string
@@ -585,3 +586,23 @@ func isValidExpoToken(token string) bool {
            strings.HasSuffix(token, "]") &&
            len(token) > 25
 }
+
+	// Modified worker functions with proper synchronization
+	func StartNotificationWorker(ctx context.Context) {
+		log.Println("Starting notification worker")
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+	
+		// Initial check on startup
+		checkPendingNotifications()
+	
+		for {
+			select {
+			case <-ctx.Done():
+				log.Println("Stopping notification worker")
+				return
+			case <-ticker.C:
+				checkPendingNotifications()
+			}
+		}
+	}
