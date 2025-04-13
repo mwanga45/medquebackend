@@ -3,6 +3,7 @@ package booking
 // here  one device will be used to make booking to day for adult  for child  it will be almost 3 child
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -385,86 +386,8 @@ func HandlecheckTime(tx *sql.Tx, day string, time time.Time) error {
 	return nil
 }
 
-func ScheduleNotification(br BookingRequest) {
-    // Validate booking time first
-    if br.Time.Before(time.Now().Add(10 * time.Minute)) {
-        log.Printf("Invalid booking time for %s", br.Username)
-        return
-    }
-
-    // Store notification in database first
-    err := storeNotificationInDB(br)
-    if err != nil {
-        log.Printf("Failed to store notification: %v", err)
-        return
-    }
-
-    notificationTime := br.Time.Add(-10 * time.Minute)
-    delay := notificationTime.Sub(time.Now())
-
-    time.AfterFunc(delay, func() {
-        // Always get fresh device ID from DB
-        var deviceID string
-        err := handlerconn.Db.QueryRow(
-            "SELECT deviceId FROM Users WHERE username = $1", 
-            br.Username,
-        ).Scan(&deviceID)
-
-        if err != nil || deviceID == "" {
-            log.Printf("Invalid device ID for %s: %v", br.Username, err)
-            return
-        }
-
-        message := ExpoMessage{
-            To:    deviceID,
-            Title: "Booking Reminder",
-            Body:  fmt.Sprintf("Your booking at %s starts soon!", br.Time.Local().Format("3:04 PM")),
-            Sound: "default",
-        }
-
-        sendWithRetry(message, 3) // 3 retry attempts
-    })
-}
-
-func sendWithRetry(msg ExpoMessage, retries int) {
-    payload, _ := json.Marshal([]ExpoMessage{msg})
-    
-    // Use proper Expo endpoint
-    req, _ := http.NewRequest("POST", "https://exp.host/--/api/v2/push/send", bytes.NewBuffer(payload))
-    req.Header.Add("Content-Type", "application/json")
-    
-    client := &http.Client{Timeout: 10 * time.Second}
-    
-    for i := 0; i <= retries; i++ {
-        resp, err := client.Do(req)
-        if err != nil {
-            log.Printf("Attempt %d failed: %v", i+1, err)
-            time.Sleep(time.Duration(i*2) * time.Second) // Exponential backoff
-            continue
-        }
-        
-        defer resp.Body.Close()
-        
-        // Check Expo-specific response
-        var result struct {
-            Data []struct {
-                Status  string `json:"status"`
-                Message string `json:"message"`
-            } `json:"data"`
-        }
-        
-        json.NewDecoder(resp.Body).Decode(&result)
-        
-        if len(result.Data) > 0 && result.Data[0].Status == "ok" {
-            return // Success
-        }
-        
-        log.Printf("Attempt %d failed: %s", i+1, result.Data[0].Message)
-    }
-}
-
-// SendNotification encodes the message into JSON and sends it over HTTP.
-func SendNotification(message ExpoMessage) {
+// // SendNotification encodes the message into JSON and sends it over HTTP.
+func  SendNotification(message ExpoMessage) {
 	// Wrap the message in a slice to match the API's JSON format.
 	payload, err := json.Marshal([]ExpoMessage{message})
 	if err != nil {
@@ -487,4 +410,105 @@ func SendNotification(message ExpoMessage) {
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Expo API returned non-200 status: %d", resp.StatusCode)
 	}
+}
+
+func storeNotificationInDB(br BookingRequest) error {
+    // Always get fresh device ID from database
+    var deviceID string
+    err := handlerconn.Db.QueryRow(
+        "SELECT deviceId FROM Users WHERE username = $1", 
+        br.Username,
+    ).Scan(&deviceID)
+    
+    if err != nil {
+        return fmt.Errorf("user device not found: %v", err)
+    }
+
+    notificationTime := br.Time.Add(-10 * time.Minute)
+    
+    _, err = handlerconn.Db.Exec(
+        `INSERT INTO scheduled_notifications 
+        (username, device_id, notification_time, booking_time)
+        VALUES ($1, $2, $3, $4)`,
+        br.Username,
+        deviceID,
+        notificationTime,
+        br.Time,
+    )
+    
+    return err
+}
+func StartNotificationWorker(ctx context.Context) {
+    ticker := time.NewTicker(1 * time.Minute)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case <-ticker.C:
+            checkPendingNotifications()
+        }
+    }
+}
+
+func checkPendingNotifications() {
+	query := "SELECT id, username, device_id, notification_time FROM scheduled_notifications WHERE status = pending AND notification_time > NOW()"
+    rows, err := handlerconn.Db.Query(query)
+    
+    if err != nil {
+        log.Printf("Notification worker error: %v", err)
+        return
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        var (
+            id             int
+            username       string
+            deviceID       string
+            notificationTime time.Time
+        )
+        
+        if err := rows.Scan(&id, &username, &deviceID, &notificationTime); err != nil {
+            continue
+        }
+
+        scheduleFromDB(id, username, deviceID, notificationTime)
+    }
+}
+func scheduleFromDB(id int, username string, deviceID string, notificationTime time.Time) {
+    now := time.Now()
+    if notificationTime.Before(now) {
+        updateNotificationStatus(id, "expired")
+        return
+    }
+
+    delay := notificationTime.Sub(now)
+    time.AfterFunc(delay, func() {
+        message := ExpoMessage{
+            To:    deviceID,
+            Title: "Booking Reminder",
+            Body:  fmt.Sprintf("Your booking is soon!"),
+        }
+        
+        if err := SendNotification(message); err == nil {
+            updateNotificationStatus(id, "delivered")
+        } else {
+            updateNotificationStatus(id, "failed")
+        }
+    })
+}
+
+func updateNotificationStatus(id int, status string) {
+    _, err := handlerconn.Db.Exec(
+        `UPDATE scheduled_notifications 
+         SET status = $1, updated_at = NOW()
+         WHERE id = $2`,
+        status, id,
+    )
+    
+    if err != nil {
+        log.Printf("Failed to update notification status: %v", err)
+    }
 }
