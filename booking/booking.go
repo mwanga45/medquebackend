@@ -385,43 +385,82 @@ func HandlecheckTime(tx *sql.Tx, day string, time time.Time) error {
 	return nil
 }
 
-func Notification(br BookingRequest) {
-	// Calculate when to send the notification (10 minutes before the booking time)
-	notificationTime := br.Time.Add(-10 * time.Minute)
-	now := time.Now()
+func ScheduleNotification(br BookingRequest) {
+    // Validate booking time first
+    if br.Time.Before(time.Now().Add(10 * time.Minute)) {
+        log.Printf("Invalid booking time for %s", br.Username)
+        return
+    }
 
-	// If the calculated notification time has already passed, log and return.
-	if notificationTime.Before(now) {
-		log.Printf("Notification time already passed for user %s", br.Username)
-		return
-	}
+    // Store notification in database first
+    err := storeNotificationInDB(br)
+    if err != nil {
+        log.Printf("Failed to store notification: %v", err)
+        return
+    }
 
-	// Calculate the delay until the notification should be sent.
-	delay := notificationTime.Sub(now)
-	time.AfterFunc(delay, func() {
-		// If the device token is not provided in the booking request, retrieve it from the database.
-		if br.DeviceId == "" {
-			var deviceId string
-			// Directly query the database to get the device token associated with this username.
-			err := handlerconn.Db.QueryRow("SELECT deviceId FROM Users WHERE username = $1", br.Username).Scan(&deviceId)
-			if err != nil {
-				log.Printf("Failed to retrieve device id for user %s: %v", br.Username, err)
-				return
-			}
-			br.DeviceId = deviceId
-		}
+    notificationTime := br.Time.Add(-10 * time.Minute)
+    delay := notificationTime.Sub(time.Now())
 
-		// Build the notification message using the retrieved (or provided) device token.
-		message := ExpoMessage{
-			To:    br.DeviceId, // Use the dynamic device token instead of a hard-coded value.
-			Title: "Booking Reminder",
-			Body:  fmt.Sprintf("Your booking at %s starts in 10 minutes!", br.Time.Format("3:04 PM")),
-			Sound: "default",
-		}
+    time.AfterFunc(delay, func() {
+        // Always get fresh device ID from DB
+        var deviceID string
+        err := handlerconn.Db.QueryRow(
+            "SELECT deviceId FROM Users WHERE username = $1", 
+            br.Username,
+        ).Scan(&deviceID)
 
-		// Send the notification.
-		SendNotification(message)
-	})
+        if err != nil || deviceID == "" {
+            log.Printf("Invalid device ID for %s: %v", br.Username, err)
+            return
+        }
+
+        message := ExpoMessage{
+            To:    deviceID,
+            Title: "Booking Reminder",
+            Body:  fmt.Sprintf("Your booking at %s starts soon!", br.Time.Local().Format("3:04 PM")),
+            Sound: "default",
+        }
+
+        sendWithRetry(message, 3) // 3 retry attempts
+    })
+}
+
+func sendWithRetry(msg ExpoMessage, retries int) {
+    payload, _ := json.Marshal([]ExpoMessage{msg})
+    
+    // Use proper Expo endpoint
+    req, _ := http.NewRequest("POST", "https://exp.host/--/api/v2/push/send", bytes.NewBuffer(payload))
+    req.Header.Add("Content-Type", "application/json")
+    
+    client := &http.Client{Timeout: 10 * time.Second}
+    
+    for i := 0; i <= retries; i++ {
+        resp, err := client.Do(req)
+        if err != nil {
+            log.Printf("Attempt %d failed: %v", i+1, err)
+            time.Sleep(time.Duration(i*2) * time.Second) // Exponential backoff
+            continue
+        }
+        
+        defer resp.Body.Close()
+        
+        // Check Expo-specific response
+        var result struct {
+            Data []struct {
+                Status  string `json:"status"`
+                Message string `json:"message"`
+            } `json:"data"`
+        }
+        
+        json.NewDecoder(resp.Body).Decode(&result)
+        
+        if len(result.Data) > 0 && result.Data[0].Status == "ok" {
+            return // Success
+        }
+        
+        log.Printf("Attempt %d failed: %s", i+1, result.Data[0].Message)
+    }
 }
 
 // SendNotification encodes the message into JSON and sends it over HTTP.
