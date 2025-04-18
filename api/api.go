@@ -3,9 +3,11 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	handlerconn "medquemod/db_conn"
 	"net/http"
+	"time"
 )
 
 type (
@@ -29,92 +31,142 @@ type (
 		User_exist bool `json:"user_exist"`
 	}
 )
-
-func Doctors(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+func Doctors(w http.ResponseWriter, r *http.Request){
+	if r.Method != http.MethodGet{
+		w.WriteHeader((http.StatusBadRequest))
 		json.NewEncoder(w).Encode(Response{
-			Message: "Invalid method used ",
+			Message: "Invalid method used",
 			Success: false,
 		})
 		return
-	}
-	tx, errTx := handlerconn.Db.Begin()
-	if errTx != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Transaction Failed",
-		})
-		return
-	}
-	defer tx.Rollback()
-
-	rows, err := tx.Query("SELECT * FROM doctors")
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "database failed to fetch data",
-			Success: false,
-		})
-		return
-	}
-	defer rows.Close()
-	// create are slice which will hold the row as value and column name as key at end
-	var doctors []map[string]interface{}
-	// store columns name variable
-	columns, _ := rows.Columns()
-	count := len(columns)
-	// create slice for store temporarly  column as key and data as value with corresponding data type of column
-	value := make([]interface{}, count)
-	// create  slice pointer neccessary during scan value data to corresponding column name
-	valueptrs := make([]interface{}, count)
-	// automatic move cursor to next rows
-	for rows.Next() {
-		for i := range columns {
-			valueptrs[i] = &value[i]
-		}
-		rows.Scan(valueptrs...)
-		// create another slice that will hold  single row data as value and also column name  as key after each loop
-		doctor := make(map[string]interface{})
-		for i, col := range columns {
-			val := value[i]
-			doctor[col] = val
-		}
-		doctors = append(doctors, doctor)
-	}
-	// handling rows error
-	if err := rows.Err(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "data failed to be proccessed",
-			Success: false,
-		})
-		return
-	}
-    if err := tx.Commit();err !=nil{
-       json.NewEncoder(w).Encode(Response{
-		Message: "Failed to commit transaction",
-		Success: false,
-	   })
-	   return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(Response{
-		Message: "successfuly fetch data",
-		Success: true,
-		Data:    doctors,
-	})
-	// handling encoding process if error occur
-	if err != nil {
+
+	query := "SELECT full_name, specialty, time_available, rating "
+
+	tx, errTx :=  handlerconn.Db.Begin()
+
+	if errTx != nil{
 		json.NewEncoder(w).Encode(Response{
-			Message: "failed to encode data ",
+			Message: "failed to start Transaction",
 			Success: false,
 		})
+		fmt.Errorf("failed to start transaction %v",errTx)
 		return
 	}
 	
+	rows, err := tx.Query(query)
+
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong here",
+			Success: false,
+		})
+		fmt.Errorf("Something went went failed to execute query %v",err)
+		return
+	}
+	loc,err := time.LoadLocation("Local")
+	now := time.Now().In(loc)
+
+	for rows.Next(){
+		var name , specialty,timeInterval, rating string
+
+		err := rows.Scan(&name,&specialty,&timeInterval,&rating)
+		if err != nil{
+			fmt.Errorf("something went wrong %s", &name, err)
+			continue
+		}
+		
+	
+	}
+
 }
+
+// func Doctors(w http.ResponseWriter, r *http.Request) {
+// 	if r.Method != http.MethodGet {
+// 		w.WriteHeader(http.StatusMethodNotAllowed)
+// 		json.NewEncoder(w).Encode(Response{
+// 			Message: "Invalid method used ",
+// 			Success: false,
+// 		})
+// 		return
+// 	}
+// 	tx, errTx := handlerconn.Db.Begin()
+// 	if errTx != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		json.NewEncoder(w).Encode(Response{
+// 			Message: "Transaction Failed",
+// 		})
+// 		return
+// 	}
+// 	defer tx.Rollback()
+
+// 	rows, err := tx.Query("SELECT * FROM doctors")
+
+// 	if err != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		json.NewEncoder(w).Encode(Response{
+// 			Message: "database failed to fetch data",
+// 			Success: false,
+// 		})
+// 		return
+// 	}
+// 	defer rows.Close()
+// 	// create are slice which will hold the row as value and column name as key at end
+// 	var doctors []map[string]interface{}
+// 	// store columns name variable
+// 	columns, _ := rows.Columns()
+// 	count := len(columns)
+// 	// create slice for store temporarly  column as key and data as value with corresponding data type of column
+// 	value := make([]interface{}, count)
+// 	// create  slice pointer neccessary during scan value data to corresponding column name
+// 	valueptrs := make([]interface{}, count)
+// 	// automatic move cursor to next rows
+// 	for rows.Next() {
+// 		for i := range columns {
+// 			valueptrs[i] = &value[i]
+// 		}
+// 		rows.Scan(valueptrs...)
+// 		// create another slice that will hold  single row data as value and also column name  as key after each loop
+// 		doctor := make(map[string]interface{})
+// 		for i, col := range columns {
+// 			val := value[i]
+// 			doctor[col] = val
+// 		}
+// 		doctors = append(doctors, doctor)
+// 	}
+// 	// handling rows error
+// 	if err := rows.Err(); err != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		json.NewEncoder(w).Encode(Response{
+// 			Message: "data failed to be proccessed",
+// 			Success: false,
+// 		})
+// 		return
+// 	}
+//     if err := tx.Commit();err !=nil{
+//        json.NewEncoder(w).Encode(Response{
+// 		Message: "Failed to commit transaction",
+// 		Success: false,
+// 	   })
+// 	   return
+// 	}
+// 	w.Header().Set("Content-Type", "application/json")
+// 	err = json.NewEncoder(w).Encode(Response{
+// 		Message: "successfuly fetch data",
+// 		Success: true,
+// 		Data:    doctors,
+// 	})
+// 	// handling encoding process if error occur
+// 	if err != nil {
+// 		json.NewEncoder(w).Encode(Response{
+// 			Message: "failed to encode data ",
+// 			Success: false,
+// 		})
+// 		return
+// 	}
+	
+// }
 func Verifyuser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
