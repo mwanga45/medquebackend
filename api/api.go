@@ -31,6 +31,12 @@ type (
 	Verfiy_user struct {
 		User_exist bool `json:"user_exist"`
 	}
+	doctorInfo  struct{
+		Fullname  string `json:"fullname"`
+		Specialty string `json:"speciality"`
+		TimeInterval string `json:"timeinterval"`
+		Rating string `json:"rating"`
+	}
 )
 
 func Doctors(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +50,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 
-	query := "SELECT full_name, specialty, time_available, rating "
+	query := "SELECT full_name, specialty, time_available, rating FROM doctor_status"
 
 	tx, errTx := handlerconn.Db.Begin()
 
@@ -85,6 +91,18 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 
 		start := strings.TrimSpace(SplitInterval[0])
 		end := strings.TrimSpace(SplitInterval[1])
+
+		currentTime := now.Format("03:04 PM")
+		 startTime,err1 := time.ParseInLocation("03:04 PM",start,loc)
+		 endTime, err2 := time.ParseInLocation("03:04 PM", end, loc)
+		 nowParser,_ := time.ParseInLocation("03:04 PM", currentTime, loc)
+
+		 if err1 != nil || err2 !=nil{
+			fmt.Errorf("failed to ParserLocation",err1, err2)
+			continue
+		 }
+		 IsAvailable := nowParser.After(startTime) && nowParser.Before(endTime)
+		 
 
 	}
 
