@@ -31,11 +31,12 @@ type (
 	Verfiy_user struct {
 		User_exist bool `json:"user_exist"`
 	}
-	doctorInfo  struct{
-		Fullname  string `json:"fullname"`
-		Specialty string `json:"speciality"`
+	doctorInfo struct {
+		Fullname     string `json:"fullname"`
+		Specialty    string `json:"speciality"`
 		TimeInterval string `json:"timeinterval"`
-		Rating string `json:"rating"`
+		Rating       string `json:"rating"`
+		IsAvailable  bool   `json:"isAvailable"`
 	}
 )
 
@@ -62,7 +63,9 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		fmt.Errorf("failed to start transaction %v", errTx)
 		return
 	}
-
+	if errcommit := tx.Commit(); errcommit != nil {
+		fmt.Errorf("something went wrong failed to commit transaction")
+	}
 	rows, err := tx.Query(query)
 
 	if err != nil {
@@ -74,7 +77,11 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	loc, err := time.LoadLocation("Local")
+	if err !=nil{
+		fmt.Errorf("something went wrong")
+	}
 	now := time.Now().In(loc)
+	var doctors []doctorInfo
 
 	for rows.Next() {
 		var name, specialty, timeInterval, rating string
@@ -93,19 +100,28 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		end := strings.TrimSpace(SplitInterval[1])
 
 		currentTime := now.Format("03:04 PM")
-		 startTime,err1 := time.ParseInLocation("03:04 PM",start,loc)
-		 endTime, err2 := time.ParseInLocation("03:04 PM", end, loc)
-		 nowParser,_ := time.ParseInLocation("03:04 PM", currentTime, loc)
+		startTime, err1 := time.ParseInLocation("03:04 PM", start, loc)
+		endTime, err2 := time.ParseInLocation("03:04 PM", end, loc)
+		nowParser, _ := time.ParseInLocation("03:04 PM", currentTime, loc)
 
-		 if err1 != nil || err2 !=nil{
-			fmt.Errorf("failed to ParserLocation",err1, err2)
+		if err1 != nil || err2 != nil {
+			fmt.Errorf("failed to ParserLocation", err1, err2)
 			continue
-		 }
-		 IsAvailable := nowParser.After(startTime) && nowParser.Before(endTime)
-		 
-
+		}
+		IsAvailable := nowParser.After(startTime) && nowParser.Before(endTime)
+		doctors = append(doctors, doctorInfo{
+			Fullname:     name,
+			Specialty:    specialty,
+			TimeInterval: timeInterval,
+			IsAvailable:  IsAvailable,
+			Rating:       rating,
+		})
 	}
-
+	json.NewEncoder(w).Encode(Response{
+		Success: false,
+		Message: "Succesfuly",
+		Data: doctors,
+	})
 }
 
 // func Doctors(w http.ResponseWriter, r *http.Request) {
