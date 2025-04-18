@@ -7,6 +7,7 @@ import (
 	"log"
 	handlerconn "medquemod/db_conn"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -31,8 +32,9 @@ type (
 		User_exist bool `json:"user_exist"`
 	}
 )
-func Doctors(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodGet{
+
+func Doctors(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
 		w.WriteHeader((http.StatusBadRequest))
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalid method used",
@@ -44,17 +46,17 @@ func Doctors(w http.ResponseWriter, r *http.Request){
 
 	query := "SELECT full_name, specialty, time_available, rating "
 
-	tx, errTx :=  handlerconn.Db.Begin()
+	tx, errTx := handlerconn.Db.Begin()
 
-	if errTx != nil{
+	if errTx != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "failed to start Transaction",
 			Success: false,
 		})
-		fmt.Errorf("failed to start transaction %v",errTx)
+		fmt.Errorf("failed to start transaction %v", errTx)
 		return
 	}
-	
+
 	rows, err := tx.Query(query)
 
 	if err != nil {
@@ -62,22 +64,28 @@ func Doctors(w http.ResponseWriter, r *http.Request){
 			Message: "Something went wrong here",
 			Success: false,
 		})
-		fmt.Errorf("Something went went failed to execute query %v",err)
+		fmt.Errorf("Something went went failed to execute query %v", err)
 		return
 	}
-	loc,err := time.LoadLocation("Local")
+	loc, err := time.LoadLocation("Local")
 	now := time.Now().In(loc)
 
-	for rows.Next(){
-		var name , specialty,timeInterval, rating string
+	for rows.Next() {
+		var name, specialty, timeInterval, rating string
 
-		err := rows.Scan(&name,&specialty,&timeInterval,&rating)
-		if err != nil{
+		err := rows.Scan(&name, &specialty, &timeInterval, &rating)
+		if err != nil {
 			fmt.Errorf("something went wrong %s", &name, err)
 			continue
 		}
-		
-	
+		SplitInterval := strings.Split(timeInterval, "-")
+		if len(SplitInterval) != 2 {
+			fmt.Errorf("something went wrong here %v", SplitInterval)
+		}
+
+		start := strings.TrimSpace(SplitInterval[0])
+		end := strings.TrimSpace(SplitInterval[1])
+
 	}
 
 }
@@ -165,7 +173,7 @@ func Doctors(w http.ResponseWriter, r *http.Request){
 // 		})
 // 		return
 // 	}
-	
+
 // }
 func Verifyuser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -173,8 +181,8 @@ func Verifyuser(w http.ResponseWriter, r *http.Request) {
 		log.Println("Invalid method used")
 		return
 	}
-	tx,errTx := handlerconn.Db.Begin()
-	if errTx != nil{
+	tx, errTx := handlerconn.Db.Begin()
+	if errTx != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Transaction failed",
@@ -213,7 +221,7 @@ func Verifyuser(w http.ResponseWriter, r *http.Request) {
 	} else {
 		verify = Verfiy_user{User_exist: true}
 	}
-	if err := tx.Commit(); err != nil{
+	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Transaction failed to commit",
@@ -234,8 +242,8 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	tx,errTx := handlerconn.Db.Begin()
-	if errTx != nil{
+	tx, errTx := handlerconn.Db.Begin()
+	if errTx != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			Message: "transaction failed",
@@ -243,7 +251,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-    defer tx.Rollback()
+	defer tx.Rollback()
 
 	// check if the deviceId is Available for this
 	query := "SELECT full_name,email,home_address,phone_number,Age,deviceId FROM Users WHERE deviceId = $1"
@@ -261,7 +269,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		log.Println("Failed to fetch value")
 		return
 	}
-    if err := tx.Commit(); err !=nil{
+	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			Message: "something went wrong Transaction faild to commit",
