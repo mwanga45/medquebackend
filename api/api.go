@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	handlerconn "medquemod/db_conn"
 	"net/http"
@@ -60,12 +59,10 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 			Message: "failed to start Transaction",
 			Success: false,
 		})
-		fmt.Errorf("failed to start transaction %v", errTx)
+		log.Printf("failed to start transaction %v", errTx)
 		return
 	}
-	if errcommit := tx.Commit(); errcommit != nil {
-		fmt.Errorf("something went wrong failed to commit transaction")
-	}
+	defer tx.Rollback()
 	rows, err := tx.Query(query)
 
 	if err != nil {
@@ -73,12 +70,12 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 			Message: "Something went wrong here",
 			Success: false,
 		})
-		fmt.Errorf("Something went went failed to execute query %v", err)
+		log.Printf("Something went went failed to execute query %v", err)
 		return
 	}
 	loc, err := time.LoadLocation("Local")
-	if err !=nil{
-		fmt.Errorf("something went wrong")
+	if err != nil {
+		log.Printf("something went wrong: %v", err)
 	}
 	now := time.Now().In(loc)
 	var doctors []doctorInfo
@@ -88,12 +85,12 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 
 		err := rows.Scan(&name, &specialty, &timeInterval, &rating)
 		if err != nil {
-			fmt.Errorf("something went wrong %s", &name, err)
+			log.Printf("something went wrong %v , %v", &name, err)
 			continue
 		}
 		SplitInterval := strings.Split(timeInterval, "-")
 		if len(SplitInterval) != 2 {
-			fmt.Errorf("something went wrong here %v", SplitInterval)
+			log.Printf("something went wrong here %v", SplitInterval)
 		}
 
 		start := strings.TrimSpace(SplitInterval[0])
@@ -105,7 +102,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		nowParser, _ := time.ParseInLocation("03:04 PM", currentTime, loc)
 
 		if err1 != nil || err2 != nil {
-			fmt.Errorf("failed to ParserLocation", err1, err2)
+			log.Printf("failed to ParserLocation:%v, %v ", err1, err2)
 			continue
 		}
 		IsAvailable := nowParser.After(startTime) && nowParser.Before(endTime)
@@ -117,10 +114,13 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 			Rating:       rating,
 		})
 	}
+	if errcommit := tx.Commit(); errcommit != nil {
+		log.Printf("something went wrong failed to commit transaction")
+	}
 	json.NewEncoder(w).Encode(Response{
-		Success: false,
+		Success: true,
 		Message: "Succesfuly",
-		Data: doctors,
+		Data:    doctors,
 	})
 }
 
