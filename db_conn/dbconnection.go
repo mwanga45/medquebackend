@@ -2,7 +2,6 @@ package handlerconn
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"time"
 
@@ -59,89 +58,7 @@ func Connectionpool(databasesourceName string) error {
 		log.Fatalf("failed to create new table %v",err)
 	}
 	
-	doctors := []struct {
-        fullName        string
-        specialty       string
-        experience      int
-        department      string
-        phoneNumber     string
-        email           string
-        availability    string
-        timeAvailable   string
-        roomNumber      string
-        profilePicture  string
-        consultationFee float64
-    }{
-        {
-            "Dr. John Doe", "Cardiology", 10, "Heart Department",
-            "123-456-7890", "johndoe@example.com", "Available", "09:00 AM - 05:00 PM",
-            "Room 101", "profile1.jpg", 150.00,
-        },
-        {
-            "Dr. Sarah Smith", "Neurology", 8, "Neuro Dept",
-            "987-654-3210", "sarahsmith@example.com", "Not Available", "10:00 AM - 04:00 PM",
-            "Room 202", "profile2.jpg", 180.00,
-        },
-        {
-            "Dr. Ahmed Karim", "Pediatrics", 5, "Children Ward",
-            "555-222-1111", "ahmedkarim@example.com", "Available", "08:00 AM - 02:00 PM",
-            "Room 303", "profile3.jpg", 130.00,
-        },
-        {
-            "Dr. Emily Zhang", "Dermatology", 12, "Skin Dept",
-            "444-666-8888", "emilyzhang@example.com", "Available", "11:00 AM - 06:00 PM",
-            "Room 404", "profile4.jpg", 160.00,
-        },
-        {
-            "Dr. Michael Lee", "Orthopedics", 15, "Ortho Dept",
-            "333-777-9999", "michaellee@example.com", "Not Available", "07:00 AM - 03:00 PM",
-            "Room 505", "profile5.jpg", 170.00,
-        },
-    }
-    insertQuery := `INSERT INTO doctors (full_name, specialty, experience, department, phone_number, email, availability, time_available, room_number, profile_picture, consultation_fee) VALUES (:full_name, :specialty, :experience, :department, :phone_number, :email, :availability, :time_available, :room_number, :profile_picture, :consultation_fee)`
-    for _, doc := range doctors {
-        _, err := Db.Exec(insertQuery, doc.fullName, doc.specialty, doc.experience, doc.department, doc.phoneNumber, doc.email, doc.availability, doc.timeAvailable, doc.roomNumber, doc.profilePicture, doc.consultationFee)
-        if err != nil {
-            fmt.Printf("Error inserting %s: %v\n", doc.fullName, err)
-        } else {
-            fmt.Printf("Inserted %s successfully.\n", doc.fullName)
-        }
-    }
-	statusInsertQuery := `
-    INSERT INTO doctor_status (
-        doctor_id, full_name, specialty, time_available, availability
-    ) VALUES ($1, $2, $3, $4, $5)
-`
-
-statusData := []struct {
-    fullName      string
-    specialty     string
-    timeAvailable string
-    available     bool
-}{
-    {"Dr. John Doe", "Cardiology", "09:00 AM - 05:00 PM", true},
-    {"Dr. Sarah Smith", "Neurology", "10:00 AM - 04:00 PM", false},
-    {"Dr. Ahmed Karim", "Pediatrics", "08:00 AM - 02:00 PM", true},
-    {"Dr. Emily Zhang", "Dermatology", "11:00 AM - 06:00 PM", true},
-    {"Dr. Michael Lee", "Orthopedics", "07:00 AM - 03:00 PM", false},
-}
-for _, d := range statusData {
-    // Fetch doctor_id using full_name
-    var doctorID int
-    err := Db.QueryRow("SELECT doctor_id FROM doctors WHERE full_name = $1", d.fullName).Scan(&doctorID)
-    if err != nil {
-        log.Printf("Failed to find doctor_id for %s: %v", d.fullName, err)
-        continue
-    }
-
-    // Insert into doctor_status
-    _, err = Db.Exec(statusInsertQuery, doctorID, d.fullName, d.specialty, d.timeAvailable, d.available)
-    if err != nil {
-        log.Printf("Failed to insert status for %s: %v", d.fullName, err)
-    } else {
-        fmt.Printf("Inserted status for %s successfully.\n", d.fullName)
-    }
-}
+	
 	user_tb := `CREATE TABLE IF NOT EXISTS Users (
 		user_id  SERIAL  PRIMARY KEY ,
 		full_name VARCHAR(150) NOT NULL,
@@ -170,6 +87,33 @@ for _, d := range statusData {
 	if _,err = Db.Exec(scheduled_notificationstb); err != nil{
 		log.Fatalf("failed to create table sheduled notification table:%v",err)
 	}
+
+	// data instert it  for sample test  
+
+doctorsDetails := `INSERT INTO doctors (full_name, specialty, years_experience, department, phone_number, email, availability, time_available, room_number, profile_picture, consultation_fee)
+VALUES 
+('Dr. Sarah Johnson', 'Cardiologist', 12, 'Cardiology', '123-456-7890', 'sarah.johnson@hospital.com', 'Yes', '09:00 AM - 03:00 PM', 'Room 101', '/images/sarah.jpg', 150.00),
+('Dr. James Lee', 'Dermatologist', 8, 'Dermatology', '234-567-8901', 'james.lee@hospital.com', 'Yes', '10:00 AM - 04:00 PM', 'Room 102', '/images/james.jpg', 120.00),
+('Dr. Amina Yusuf', 'Neurologist', 15, 'Neurology', '345-678-9012', 'amina.yusuf@hospital.com', 'Yes', '11:00 AM - 05:00 PM', 'Room 103', '/images/amina.jpg', 200.00),
+('Dr. David Smith', 'Pediatrician', 10, 'Pediatrics', '456-789-0123', 'david.smith@hospital.com', 'Yes', '08:00 AM - 12:00 PM', 'Room 104', '/images/david.jpg', 100.00),
+('Dr. Leila Ali', 'Orthopedic', 9, 'Orthopedics', '567-890-1234', 'leila.ali@hospital.com', 'Yes', '01:00 PM - 06:00 PM', 'Room 105', '/images/leila.jpg', 180.00);`
+_, err = Db.Exec(doctorsDetails)
+if err != nil {
+	log.Fatalf("failed to insert sample doctor data: %v", err)
+}
+status_test := `INSERT INTO doctor_status (doctor_id, full_name, specialty, time_available)
+VALUES 
+(1, 'Dr. Sarah Johnson', 'Cardiologist', '09:00 AM - 03:00 PM'),
+(2, 'Dr. James Lee', 'Dermatologist', '10:00 AM - 04:00 PM'),
+(3, 'Dr. Amina Yusuf', 'Neurologist', '11:00 AM - 05:00 PM'),
+(4, 'Dr. David Smith', 'Pediatrician', '08:00 AM - 12:00 PM'),
+(5, 'Dr. Leila Ali', 'Orthopedic', '01:00 PM - 06:00 PM');`
+
+_,err = Db.Query(status_test)
+if err != nil{
+	log.Fatalf("failedtto insert data %v", err)
+} 
+
 	return nil
 
 }
