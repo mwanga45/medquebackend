@@ -53,7 +53,6 @@ func Connectionpool(databasesourceName string) error {
 		full_name VARCHAR(100) NOT NULL,
 		specialty VARCHAR(100) NOT NULL,
 		time_available VARCHAR(50),
-		availability BOOLEAN DEFAULT FALSE,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 	if _, err = Db.Exec(doctors_status); err !=nil{

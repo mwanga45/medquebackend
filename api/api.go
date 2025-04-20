@@ -41,7 +41,7 @@ type (
 
 func Doctors(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		w.WriteHeader((http.StatusBadRequest))
+		w.WriteHeader((http.StatusMethodNotAllowed))
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalid method used",
 			Success: false,
@@ -73,6 +73,7 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Something went went failed to execute query %v", err)
 		return
 	}
+	defer rows.Close()
 	loc, err := time.LoadLocation("Local")
 	if err != nil {
 		log.Printf("something went wrong: %v", err)
@@ -85,12 +86,13 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 
 		err := rows.Scan(&name, &specialty, &timeInterval, &rating)
 		if err != nil {
-			log.Printf("something went wrong %v , %v", &name, err)
+			log.Printf("something went wrong %v", &name)
 			continue
 		}
-		SplitInterval := strings.Split(timeInterval, "-")
+		SplitInterval := strings.SplitN(timeInterval, "-",2)
 		if len(SplitInterval) != 2 {
 			log.Printf("something went wrong here %v", SplitInterval)
+			continue
 		}
 
 		start := strings.TrimSpace(SplitInterval[0])
@@ -105,14 +107,18 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 			log.Printf("failed to ParserLocation:%v, %v ", err1, err2)
 			continue
 		}
-		IsAvailable := nowParser.After(startTime) && nowParser.Before(endTime)
+		// IsAvailable := nowParser.After(startTime) && nowParser.Before(endTime)
+		isAvailable := (nowParser.Equal(startTime) || nowParser.After(startTime) && nowParser.Equal(endTime)|| nowParser.Before(endTime))
 		doctors = append(doctors, doctorInfo{
 			Fullname:     name,
 			Specialty:    specialty,
 			TimeInterval: timeInterval,
-			IsAvailable:  IsAvailable,
+			IsAvailable:  isAvailable,
 			Rating:       rating,
 		})
+	}
+	if err := rows.Err(); err !=nil{
+		log.Printf("row iteration failed: %v", err)
 	}
 	if errcommit := tx.Commit(); errcommit != nil {
 		log.Printf("something went wrong failed to commit transaction")
