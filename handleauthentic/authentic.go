@@ -54,7 +54,7 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		return
 	}
    Fullname := fmt.Sprint(req.Firstname + " " + req.Secondname)
-	insert_query := "INSERT INTO Users(fullname,secretekey,dial,email,deviceId,birthdate,homeaddress,user_type) VALUES($1,$2,$3,$4,$5,$6,$7)"
+	insert_query := "INSERT INTO Users(fullname,Secretekey,phone_number,email,deviceId,Birthdate,home_address,user_type) VALUES($1,$2,$3,$4,$5,$6,$7,$8)"
 
 	_,err = handlerconn.Db.Exec(insert_query,Fullname,req.Secretekey,req.Dial,req.Email,req.DeviceId,req.Birthdate,req.HomeAddress,"Patient")
 
