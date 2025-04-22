@@ -52,6 +52,7 @@ func Connectionpool(databasesourceName string) error {
 		full_name VARCHAR(100) NOT NULL,
 		specialty VARCHAR(100) NOT NULL,
 		time_available VARCHAR(50),
+		rating varchar(50),
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 	if _, err = Db.Exec(doctors_status); err !=nil{
@@ -101,13 +102,13 @@ _, err = Db.Exec(doctorsDetails)
 if err != nil {
 	log.Fatalf("failed to insert sample doctor data: %v", err)
 }
-status_test := `INSERT INTO doctor_status (doctor_id, full_name, specialty, time_available)
+status_test := `INSERT INTO doctor_status (doctor_id, full_name, specialty, time_available, rating)
 VALUES 
-(1, 'Dr. Sarah Johnson', 'Cardiologist', '09:00 AM - 03:00 PM'),
-(2, 'Dr. James Lee', 'Dermatologist', '10:00 AM - 04:00 PM'),
-(3, 'Dr. Amina Yusuf', 'Neurologist', '11:00 AM - 05:00 PM'),
-(4, 'Dr. David Smith', 'Pediatrician', '08:00 AM - 12:00 PM'),
-(5, 'Dr. Leila Ali', 'Orthopedic', '01:00 PM - 06:00 PM');`
+(1, 'Dr. Sarah Johnson', 'Cardiologist', '09:00 AM - 03:00 PM','1.2'),
+(2, 'Dr. James Lee', 'Dermatologist', '10:00 AM - 04:00 PM','3.4'),
+(3, 'Dr. Amina Yusuf', 'Neurologist', '11:00 AM - 05:00 PM','4.5'),
+(4, 'Dr. David Smith', 'Pediatrician', '08:00 AM - 12:00 PM','3.6'),
+(5, 'Dr. Leila Ali', 'Orthopedic', '01:00 PM - 06:00 PM','2.9');`
 
 _,err = Db.Query(status_test)
 if err != nil{

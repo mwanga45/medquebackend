@@ -32,7 +32,7 @@ type (
 	}
 	doctorInfo struct {
 		Fullname     string `json:"fullname"`
-		Specialty    string `json:"speciality"`
+		Specialty    string `json:"specialty"`
 		TimeInterval string `json:"timeinterval"`
 		Rating       string `json:"rating"`
 		IsAvailable  bool   `json:"isAvailable"`
@@ -130,91 +130,6 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// func Doctors(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodGet {
-// 		w.WriteHeader(http.StatusMethodNotAllowed)
-// 		json.NewEncoder(w).Encode(Response{
-// 			Message: "Invalid method used ",
-// 			Success: false,
-// 		})
-// 		return
-// 	}
-// 	tx, errTx := handlerconn.Db.Begin()
-// 	if errTx != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		json.NewEncoder(w).Encode(Response{
-// 			Message: "Transaction Failed",
-// 		})
-// 		return
-// 	}
-// 	defer tx.Rollback()
-
-// 	rows, err := tx.Query("SELECT * FROM doctors")
-
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		json.NewEncoder(w).Encode(Response{
-// 			Message: "database failed to fetch data",
-// 			Success: false,
-// 		})
-// 		return
-// 	}
-// 	defer rows.Close()
-// 	// create are slice which will hold the row as value and column name as key at end
-// 	var doctors []map[string]interface{}
-// 	// store columns name variable
-// 	columns, _ := rows.Columns()
-// 	count := len(columns)
-// 	// create slice for store temporarly  column as key and data as value with corresponding data type of column
-// 	value := make([]interface{}, count)
-// 	// create  slice pointer neccessary during scan value data to corresponding column name
-// 	valueptrs := make([]interface{}, count)
-// 	// automatic move cursor to next rows
-// 	for rows.Next() {
-// 		for i := range columns {
-// 			valueptrs[i] = &value[i]
-// 		}
-// 		rows.Scan(valueptrs...)
-// 		// create another slice that will hold  single row data as value and also column name  as key after each loop
-// 		doctor := make(map[string]interface{})
-// 		for i, col := range columns {
-// 			val := value[i]
-// 			doctor[col] = val
-// 		}
-// 		doctors = append(doctors, doctor)
-// 	}
-// 	// handling rows error
-// 	if err := rows.Err(); err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		json.NewEncoder(w).Encode(Response{
-// 			Message: "data failed to be proccessed",
-// 			Success: false,
-// 		})
-// 		return
-// 	}
-//     if err := tx.Commit();err !=nil{
-//        json.NewEncoder(w).Encode(Response{
-// 		Message: "Failed to commit transaction",
-// 		Success: false,
-// 	   })
-// 	   return
-// 	}
-// 	w.Header().Set("Content-Type", "application/json")
-// 	err = json.NewEncoder(w).Encode(Response{
-// 		Message: "successfuly fetch data",
-// 		Success: true,
-// 		Data:    doctors,
-// 	})
-// 	// handling encoding process if error occur
-// 	if err != nil {
-// 		json.NewEncoder(w).Encode(Response{
-// 			Message: "failed to encode data ",
-// 			Success: false,
-// 		})
-// 		return
-// 	}
-
-// }
 func Verifyuser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
