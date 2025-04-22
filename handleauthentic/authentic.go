@@ -3,18 +3,21 @@ package authentic
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"medquemod/db_conn"
 	"net/http"
 )
 
 // create struct for http request for registration
 type reg_request struct{
-	Fullname string `json:"fullname"`
-	Phone_num string `json:"phone_num"`
-	Email_address string `json:"email_address"`
-	Home_address string `json:"home_address"`
-	DeviceId string `json:"deviceId"`
-	Age string `json:"age"`
+	Firstname  string `json:"firstname" validate:"required"`
+	Secondname string `json:"secondname" validate:"required"`
+	Secretekey string `json:"secretekey" validate:"required"`
+	Dial string `json:"dial" validate:"required"`
+	Email string `json:"email" validate:"required"`
+	DeviceId string `json:"deviceid" validate:"required"`
+	Birthdate string `json:"birthdate" validate:"required"`
+	HomeAddress string `json:"homeaddress"`
 }
 type response struct{
 	Success bool `json:"success"`
@@ -33,14 +36,14 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		return
 	}
 
-	if  req.Fullname == "" || req.Email_address == "" ||req.Phone_num == "" {
+	if  req.Firstname == "" || req.Secondname == "" ||req.Secretekey == "" || req.Birthdate =="" || req.DeviceId ==""||req.Dial == "" || req.Email == "" {
 		http.Error(w, "some empty please field all reqiure field ", http.StatusBadRequest)
 		return
 	}
 
-	query := "SELECT   email, phone_number FROM Users WHERE email = $1 OR phone_number =$2"
+	query := "SELECT   email, dial FROM Users WHERE email = $1 OR phone_number =$2"
    var emaiexist , phoneexist string
-	err := handlerconn.Db.QueryRow(query,req.Email_address,req.Phone_num).Scan(&emaiexist, &phoneexist)
+	err := handlerconn.Db.QueryRow(query,req.Email,req.Dial).Scan(&emaiexist, &phoneexist)
 
 	if err == nil{
 		http.Error(w, "email or phone number already exist", http.StatusBadRequest)
@@ -50,10 +53,10 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		http.Error(w,"server error",http.StatusInternalServerError )
 		return
 	}
+   Fullname := fmt.Sprint(req.Firstname + " " + req.Secondname)
+	insert_query := "INSERT INTO Users(fullname,secretekey,dial,email,deviceId,birthdate,homeaddress,user_type) VALUES($1,$2,$3,$4,$5,$6,$7)"
 
-	insert_query := "INSERT INTO Users(full_name,age, home_address, email,phone_number,deviceId,user_type) VALUES($1,$2,$3,$4,$5,$6,$7)"
-
-	_,err = handlerconn.Db.Exec(insert_query,req.Fullname,req.Age, req.Home_address,req.Email_address,req.Phone_num,req.DeviceId,"Patient")
+	_,err = handlerconn.Db.Exec(insert_query,Fullname,req.Secretekey,req.Dial,req.Email,req.DeviceId,req.Birthdate,req.HomeAddress,"Patient")
 
 	if err != nil{
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
