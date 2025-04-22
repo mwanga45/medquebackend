@@ -67,8 +67,8 @@ func Connectionpool(databasesourceName string) error {
 		home_address VARCHAR(150),
 		email VARCHAR(100) UNIQUE NOT NULL,
 		phone_number VARCHAR(20) UNIQUE,
-		deviceId VARCHAR(200)UNIQUE,
-		Age VARCHAR(20),
+		deviceId VARCHAR(200)UNIQUE NOT NULL,
+		Birthdate VARCHAR(200) NOT NULL,
 		user_type VARCHAR(20) CHECK (user_type IN ('Patient')),
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
@@ -92,30 +92,29 @@ func Connectionpool(databasesourceName string) error {
 
 	// data instert it  for sample test  
 
-doctorsDetails := `INSERT INTO doctors (full_name, specialty, years_experience, department, phone_number, email, availability, time_available, room_number, profile_picture, consultation_fee)
-VALUES 
-('Dr. Sarah Johnson', 'Cardiologist', 12, 'Cardiology', '123-456-7890', 'sarah.johnson@hospital.com', 'Yes', '09:00 AM - 03:00 PM', 'Room 101', '/images/sarah.jpg', 150.00),
-('Dr. James Lee', 'Dermatologist', 8, 'Dermatology', '234-567-8901', 'james.lee@hospital.com', 'Yes', '10:00 AM - 04:00 PM', 'Room 102', '/images/james.jpg', 120.00),
-('Dr. Amina Yusuf', 'Neurologist', 15, 'Neurology', '345-678-9012', 'amina.yusuf@hospital.com', 'Yes', '11:00 AM - 05:00 PM', 'Room 103', '/images/amina.jpg', 200.00),
-('Dr. David Smith', 'Pediatrician', 10, 'Pediatrics', '456-789-0123', 'david.smith@hospital.com', 'Yes', '08:00 AM - 12:00 PM', 'Room 104', '/images/david.jpg', 100.00),
-('Dr. Leila Ali', 'Orthopedic', 9, 'Orthopedics', '567-890-1234', 'leila.ali@hospital.com', 'Yes', '01:00 PM - 06:00 PM', 'Room 105', '/images/leila.jpg', 180.00);`
-_, err = Db.Exec(doctorsDetails)
-if err != nil {
-	log.Fatalf("failed to insert sample doctor data: %v", err)
-}
-status_test := `INSERT INTO doctor_status (doctor_id, full_name, specialty, time_available, rating)
-VALUES 
-(1, 'Dr. Sarah Johnson', 'Cardiologist', '09:00 AM - 03:00 PM','1.2'),
-(2, 'Dr. James Lee', 'Dermatologist', '10:00 AM - 04:00 PM','3.4'),
-(3, 'Dr. Amina Yusuf', 'Neurologist', '11:00 AM - 05:00 PM','4.5'),
-(4, 'Dr. David Smith', 'Pediatrician', '08:00 AM - 12:00 PM','3.6'),
-(5, 'Dr. Leila Ali', 'Orthopedic', '01:00 PM - 06:00 PM','2.9');`
+// doctorsDetails := `INSERT INTO doctors (full_name, specialty, years_experience, department, phone_number, email, availability, time_available, room_number, profile_picture, consultation_fee)
+// VALUES 
+// ('Dr. Sarah Johnson', 'Cardiologist', 12, 'Cardiology', '123-456-7890', 'sarah.johnson@hospital.com', 'Yes', '09:00 AM - 03:00 PM', 'Room 101', '/images/sarah.jpg', 150.00),
+// ('Dr. James Lee', 'Dermatologist', 8, 'Dermatology', '234-567-8901', 'james.lee@hospital.com', 'Yes', '10:00 AM - 04:00 PM', 'Room 102', '/images/james.jpg', 120.00),
+// ('Dr. Amina Yusuf', 'Neurologist', 15, 'Neurology', '345-678-9012', 'amina.yusuf@hospital.com', 'Yes', '11:00 AM - 05:00 PM', 'Room 103', '/images/amina.jpg', 200.00),
+// ('Dr. David Smith', 'Pediatrician', 10, 'Pediatrics', '456-789-0123', 'david.smith@hospital.com', 'Yes', '08:00 AM - 12:00 PM', 'Room 104', '/images/david.jpg', 100.00),
+// ('Dr. Leila Ali', 'Orthopedic', 9, 'Orthopedics', '567-890-1234', 'leila.ali@hospital.com', 'Yes', '01:00 PM - 06:00 PM', 'Room 105', '/images/leila.jpg', 180.00);`
+// _, err = Db.Exec(doctorsDetails)
+// if err != nil {
+// 	log.Fatalf("failed to insert sample doctor data: %v", err)
+// }
+// status_test := `INSERT INTO doctor_status (doctor_id, full_name, specialty, time_available, rating)
+// VALUES 
+// (1, 'Dr. Sarah Johnson', 'Cardiologist', '09:00 AM - 03:00 PM','1.2'),
+// (2, 'Dr. James Lee', 'Dermatologist', '10:00 AM - 04:00 PM','3.4'),
+// (3, 'Dr. Amina Yusuf', 'Neurologist', '11:00 AM - 05:00 PM','4.5'),
+// (4, 'Dr. David Smith', 'Pediatrician', '08:00 AM - 12:00 PM','3.6'),
+// (5, 'Dr. Leila Ali', 'Orthopedic', '01:00 PM - 06:00 PM','2.9');`
 
-_,err = Db.Query(status_test)
-if err != nil{
-	log.Fatalf("failedtto insert data %v", err)
-} 
-
+// _,err = Db.Query(status_test)
+// if err != nil{
+// 	log.Fatalf("failedtto insert data %v", err)
+// } 
 	return nil
 
 }
