@@ -17,7 +17,6 @@ func Connectionpool(databasesourceName string) error {
 		return err
 	}
 
-	// configuration of new connection pool
 	Db.SetMaxOpenConns(25)
 	Db.SetConnMaxIdleTime(25)
 	Db.SetConnMaxLifetime(5 * time.Minute)
