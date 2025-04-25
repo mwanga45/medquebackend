@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"medquemod/db_conn"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // create struct for http request for registration
@@ -15,13 +17,13 @@ type reg_request struct{
 	Secretekey string `json:"secretekey" validate:"required"`
 	Dial string `json:"dial" validate:"required"`
 	Email string `json:"email" validate:"required"`
-	DeviceId string `json:"deviceid" validate:"required"`
+	DeviceId string `json:"deviceId" validate:"required"`
 	Birthdate string `json:"birthdate" validate:"required"`
 	HomeAddress string `json:"homeaddress"`
 }
 type response struct{
 	Success bool `json:"success"`
-	Message string `json:"messsage,omitempty"`
+	Message string `json:"message,omitempty"`
 	
 }
 func Handler(w http.ResponseWriter, r* http.Request ){
@@ -41,7 +43,7 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		return
 	}
 
-	query := "SELECT   email, dial FROM Users WHERE email = $1 OR phone_number =$2"
+	query := "SELECT   email, dial FROM Users WHERE email = $1 OR  dial =$2"
    var emaiexist , phoneexist string
 	err := handlerconn.Db.QueryRow(query,req.Email,req.Dial).Scan(&emaiexist, &phoneexist)
 
@@ -54,9 +56,18 @@ func Handler(w http.ResponseWriter, r* http.Request ){
 		return
 	}
    Fullname := fmt.Sprint(req.Firstname + " " + req.Secondname)
-	insert_query := "INSERT INTO Users(fullname,Secretekey,phone_number,email,deviceId,Birthdate,home_address,user_type) VALUES($1,$2,$3,$4,$5,$6,$7,$8)"
-
-	_,err = handlerconn.Db.Exec(insert_query,Fullname,req.Secretekey,req.Dial,req.Email,req.DeviceId,req.Birthdate,req.HomeAddress,"Patient")
+   hashedsecretekey,err :=bcrypt.GenerateFromPassword([]byte(req.Secretekey), bcrypt.DefaultCost)
+   if err != nil{
+	json.NewEncoder(w).Encode(response{
+		Message: "failed to hashed secrete key",
+		Success: false,
+		
+	})
+	return
+   }
+	insert_query := "INSERT INTO Users(fullname,Secretekey,dial,email,deviceId,Birthdate,home_address,user_type) VALUES($1,$2,$3,$4,$5,$6,$7,$8)"
+   
+	_,err = handlerconn.Db.Exec(insert_query,Fullname,hashedsecretekey,req.Dial,req.Email,req.DeviceId,req.Birthdate,req.HomeAddress,"Patient")
 
 	if err != nil{
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)

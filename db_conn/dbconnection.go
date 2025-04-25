@@ -62,10 +62,10 @@ func Connectionpool(databasesourceName string) error {
 	user_tb := `CREATE TABLE IF NOT EXISTS Users (
 		user_id  SERIAL  PRIMARY KEY ,
 		fullname VARCHAR(150) NOT NULL,
-		Secreate VARCHAR(200) NOT NULL, 
+		Secretekey VARCHAR(200) NOT NULL, 
 		home_address VARCHAR(150),
 		email VARCHAR(100) UNIQUE NOT NULL,
-		phone_number VARCHAR(20) UNIQUE,
+		dial VARCHAR(20) UNIQUE,
 		deviceId VARCHAR(200)UNIQUE NOT NULL,
 		Birthdate VARCHAR(200) NOT NULL,
 		user_type VARCHAR(20) CHECK (user_type IN ('Patient')),
