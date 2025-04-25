@@ -13,7 +13,7 @@ import (
 type (
 	Response struct {
 		Message string      `json:"message"`
-		Success bool        `json:"success,omitempty"`
+		Success bool        `json:"success"`
 		Data    interface{} `json:"data"`
 	}
 	DeviceUid struct {
@@ -131,65 +131,88 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 }
 
 func Verifyuser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		log.Println("Invalid method used")
-		return
-	}
-	tx, errTx := handlerconn.Db.Begin()
-	if errTx != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Transaction failed",
-			Success: true,
-		})
-		return
-	}
-	defer tx.Rollback()
-	var deviceId DeviceUid
-	query := "SELECT deviceId FROM Users WHERE deviceId = $1"
-	err := json.NewDecoder(r.Body).Decode(&deviceId)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "failed to decode",
-			Success: false,
-		})
-		return
-	}
-	var verify Verfiy_user
-	var check_deviceid string
-	err = tx.QueryRow(query, deviceId.DeviceId).Scan(&check_deviceid)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			verify = Verfiy_user{User_exist: false}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(Response{
-				Message: "Not yet Registered",
-				Success: true,
-				Data:    verify,
-			})
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	} else {
-		verify = Verfiy_user{User_exist: true}
-	}
-	if err := tx.Commit(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Transaction failed to commit",
-			Success: false,
-		})
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Response{
-		Message: "success",
-		Data:    verify,
-		Success: true,
-	})
+    // 1) Always set JSON header up front
+    w.Header().Set("Content-Type", "application/json")
+
+    
+    if r.Method != http.MethodPost {
+        w.WriteHeader(http.StatusMethodNotAllowed)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Method not allowed",
+            Success: false,
+        })
+        return                                  // ← return after Encode
+    }
+
+    
+    var payload struct {
+        DeviceId string `json:"deviceId"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+        w.WriteHeader(http.StatusBadRequest)     
+        json.NewEncoder(w).Encode(Response{
+            Message: "Invalid JSON payload",
+            Success: false,
+        })
+        return                                  
+    }
+
+
+    tx, err := handlerconn.Db.Begin()
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Transaction failed to start",
+            Success: false,
+        })
+        return
+    }
+    defer tx.Rollback()
+
+    
+    var checkDeviceID string
+    err = tx.
+        QueryRow("SELECT deviceId FROM Users WHERE deviceId = $1", payload.DeviceId).
+        Scan(&checkDeviceID)
+
+
+    if err == sql.ErrNoRows {
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Not yet Registered",
+            Success: true,
+            Data: struct {
+                UserExist bool `json:"user_exist"`
+            }{false},
+        })
+        return                                  
+    }
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Database query error",
+            Success: false,
+        })
+        return
+    }
+
+    if err := tx.Commit(); err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Transaction failed to commit",
+            Success: false,
+        })
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(Response{
+        Message: "Success",
+        Success: true,
+        Data: struct {
+            UserExist bool `json:"user_exist"`
+        }{true},
+    })
 }
 
 func Userdetails(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +231,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// check if the deviceId is Available for this
+
 	query := "SELECT full_name,email,home_address,phone_number,Age,deviceId FROM Users WHERE deviceId = $1"
 	var dvId DeviceUid
 	err := json.NewDecoder(r.Body).Decode(&dvId)
