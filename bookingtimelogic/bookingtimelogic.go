@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	// handlerconn "medquemod/db_conn"
 	"net/http"
 )
 
@@ -19,6 +17,7 @@ type (
 )
 
 func Timelogic(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Respond{
@@ -27,7 +26,6 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 
 	// return days interval
 	Dayslote, err := DayInterval()
@@ -37,6 +35,7 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 			Message: "Something went wrong",
 			Success: false,
 		})
+		return
 	}
 	Timeslots, err := Timeslot()
 	if err != nil {
@@ -45,6 +44,7 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 			Message: "Something went wrong here",
 			Success: false,
 		})
+		return
 	}
 
 	json.NewEncoder(w).Encode(Respond{
