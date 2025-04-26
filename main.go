@@ -7,6 +7,7 @@ import (
 	"medquemod/api"
 	apiweb "medquemod/api-web"
 	"medquemod/booking"
+	"medquemod/bookingtimelogic"
 	handler_chat "medquemod/chatbot"
 	"medquemod/db_conn"
 	"medquemod/handleauthentic"
@@ -14,7 +15,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time" 
+	"time"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -44,6 +46,7 @@ func main() {
 		r.HandleFunc("/verifyuser",api.Verifyuser).Methods("POST")
 		r.HandleFunc("/registerstaff",apiweb.HandleRegisterUser).Methods("POST") //for webapplication
 		r.HandleFunc("/staffsignIn",apiweb.LoginHandler).Methods("POST")//for webapplication
+		r.HandleFunc("/bookinglogic", bookingtimelogic.Timelogic).Methods("GET")
 
 	// Configure CORS
 	cors := handlers.CORS(
