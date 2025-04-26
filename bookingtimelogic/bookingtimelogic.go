@@ -53,6 +53,7 @@ func Timelogic(w http.ResponseWriter, r *http.Request) {
 		Tslot:   Timeslots,
 		Dslot:   Dayslote,
 	})
+
 }
 func DayInterval() (interface{}, error) {
 	// create an object that will carry current time
