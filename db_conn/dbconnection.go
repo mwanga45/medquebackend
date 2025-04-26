@@ -88,6 +88,17 @@ func Connectionpool(databasesourceName string) error {
 	if _,err = Db.Exec(scheduled_notificationstb); err != nil{
 		log.Fatalf("failed to create table sheduled notification table:%v",err)
 	}
+	serviceAvailable := `CREATE TABLE IF NOT EXISTS serviceavalable(
+	    id SERIAL PRIMARY KEY,
+		disease VARCHAR(255) NOT NULL,
+		doctor_id INT REFERENCES doctors(doctor_id) ON DELETE CASCADE,
+		fullname VARCHAR(255)
+
+	)`
+	if _,err = Db.Exec(serviceAvailable); err !=nil{
+       log.Fatalf("Failed to create table serviceAvailable :%v ", err)
+	}
+	
 
 	// data instert it  for sample test  
 
