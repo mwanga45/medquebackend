@@ -47,6 +47,7 @@ func main() {
 		r.HandleFunc("/registerstaff",apiweb.HandleRegisterUser).Methods("POST") //for webapplication
 		r.HandleFunc("/staffsignIn",apiweb.LoginHandler).Methods("POST")//for webapplication
 		r.HandleFunc("/bookinglogic", bookingtimelogic.Timelogic).Methods("GET")
+		r.HandleFunc("/serviceAvailable", api.GetService).Methods("GET")
 
 	// Configure CORS
 	cors := handlers.CORS(
