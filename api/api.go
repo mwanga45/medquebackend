@@ -284,7 +284,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 			Message: "Server Error failed to begin Transaction",
 			Success: false,
 		})
-		fmt.Errorf("something went wrong here %v", errTx)
+		fmt.Errorf("something went wrong here %w", errTx)
 		return
 	   }
 	   query := "SELECT * FROM serviceavalable"
@@ -294,7 +294,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 			Message: "Server Error Failed to fetch data",
 			Success: false,
 		  })
-		  fmt.Errorf("something went wrong here", err)
+		  fmt.Errorf("something went wrong here %w",err)
 		  return
 	   }
        json.NewEncoder(w).Encode(Response{
