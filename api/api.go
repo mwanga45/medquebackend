@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	handlerconn "medquemod/db_conn"
 	"net/http"
@@ -141,7 +142,7 @@ func Verifyuser(w http.ResponseWriter, r *http.Request) {
             Message: "Method not allowed",
             Success: false,
         })
-        return                                  // ← return after Encode
+        return                                 
     }
 
     
@@ -266,7 +267,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
- func getService(w http.ResponseWriter, r*http.Request){
+ func GetService(w http.ResponseWriter, r*http.Request){
        if r.Method != http.MethodGet{
 		w .WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
@@ -276,4 +277,30 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		return
 	   }
 	   w.Header().Set("Content-type", "application/json")
+
+	   tx,errTx := handlerconn.Db.Begin()
+	   if errTx !=nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Server Error failed to begin Transaction",
+			Success: false,
+		})
+		fmt.Errorf("something went wrong here %v", errTx)
+		return
+	   }
+	   query := "SELECT * FROM serviceavalable"
+	   Result,err := tx.Query(query)
+	   if err != nil{
+          json.NewEncoder(w).Encode(Response{
+			Message: "Server Error Failed to fetch data",
+			Success: false,
+		  })
+		  fmt.Errorf("something went wrong here", err)
+		  return
+	   }
+       json.NewEncoder(w).Encode(Response{
+		Message: "Successfuly return data",
+		Success: false,
+		Data: Result,
+	   })
+
  }
