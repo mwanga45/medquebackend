@@ -266,3 +266,14 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+ func getService(w http.ResponseWriter, r*http.Request){
+       if r.Method != http.MethodGet{
+		w .WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Bad request Method isn`t allowed",
+			Success: false,
+		})
+		return
+	   }
+	   w.Header().Set("Content-type", "application/json")
+ }
