@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	handlerconn "medquemod/db_conn"
 	"net/http"
@@ -37,6 +36,13 @@ type (
 		TimeInterval string `json:"timeinterval"`
 		Rating       string `json:"rating"`
 		IsAvailable  bool   `json:"isAvailable"`
+	}
+	 Service struct {
+		ID                  int     `json:"id"`                   
+		Disease             string  `json:"disease"`              
+		Fullname            string  `json:"fullname"`             
+		ServiceDescription  string  `json:"serviceDescription"`   
+		ConsultationFee     float64 `json:"consultationFee"`      
 	}
 )
 
@@ -267,40 +273,70 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
- func GetService(w http.ResponseWriter, r*http.Request){
-       if r.Method != http.MethodGet{
-		w .WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Bad request Method isn`t allowed",
-			Success: false,
-		})
-		return
-	   }
-	   w.Header().Set("Content-type", "application/json")
+func GetService(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        w.WriteHeader(http.StatusMethodNotAllowed)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Method not allowed",
+            Success: false,
+        })
+        return
+    }
 
-	   tx,errTx := handlerconn.Db.Begin()
-	   if errTx !=nil{
-		json.NewEncoder(w).Encode(Response{
-			Message: "Server Error failed to begin Transaction",
-			Success: false,
-		})
-		fmt.Errorf("something went wrong here %w", errTx)
-		return
-	   }
-	   query := "SELECT * FROM serviceavalable"
-	   Result,err := tx.Query(query)
-	   if err != nil{
-          json.NewEncoder(w).Encode(Response{
-			Message: "Server Error Failed to fetch data",
-			Success: false,
-		  })
-		  fmt.Errorf("something went wrong here %w",err)
-		  return
-	   }
-       json.NewEncoder(w).Encode(Response{
-		Message: "Successfuly return data",
-		Success: false,
-		Data: Result,
-	   })
+    w.Header().Set("Content-Type", "application/json")
 
- }
+    
+    rows, err := handlerconn.Db.Query("SELECT * FROM  serviceavalable")
+    if err != nil {
+        log.Printf("Database query error: %v", err)  
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Server Error: Failed to fetch data",
+            Success: false,
+        })
+        return
+    }
+    defer rows.Close()  
+
+    
+    var services []Service
+
+    for rows.Next() {
+        var service Service
+        err := rows.Scan(
+            &service.ID,         
+            &service.Fullname,      
+            &service.Disease, 
+			&service.ServiceDescription,
+			&service.ConsultationFee,
+        )
+        if err != nil {
+            log.Printf("Row scanning error: %v", err)
+            w.WriteHeader(http.StatusInternalServerError)
+            json.NewEncoder(w).Encode(Response{
+                Message: "Server Error: Failed to process data",
+                Success: false,
+            })
+            return
+        }
+        services = append(services, service)
+    }
+
+    
+    if err = rows.Err(); err != nil {
+        log.Printf("Row iteration error: %v", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Server Error: Data processing failed",
+            Success: false,
+        })
+        return
+    }
+
+    
+    json.NewEncoder(w).Encode(Response{
+        Message: "Successfully returned data",
+        Success: true,
+        Data:    services,  
+    })
+}

@@ -91,9 +91,9 @@ func Connectionpool(databasesourceName string) error {
 	serviceAvailable := `CREATE TABLE IF NOT EXISTS serviceavalable(
 	    id SERIAL PRIMARY KEY,
 		disease VARCHAR(255) NOT NULL,
-		doctor_id INT REFERENCES doctors(doctor_id) ON DELETE CASCADE,
-		fullname VARCHAR(255)
-
+		fullname VARCHAR(255),
+		service_description TEXT,
+		consultation_fee NUMERIC(10,2) DEFAULT 0
 	)`
 	if _,err = Db.Exec(serviceAvailable); err !=nil{
        log.Fatalf("Failed to create table serviceAvailable :%v ", err)
@@ -125,6 +125,24 @@ func Connectionpool(databasesourceName string) error {
 // if err != nil{
 // 	log.Fatalf("failedtto insert data %v", err)
 // } 
+
+// test_data := `INSERT INTO serviceavalable(disease, fullname, service_description, consultation_fee) VALUES
+// ('Malaria', 'General Physician', 'Diagnosis and treatment for malaria and related symptoms.', 25.00),
+// ('Diabetes', 'Endocrinologist', 'Blood sugar monitoring, insulin management, and lifestyle advice.', 50.00),
+// ('Hypertension', 'Cardiologist', 'Blood pressure checks and cardiovascular health services.', 45.00),
+// ('Asthma', 'Pulmonologist', 'Respiratory assessments and asthma management plans.', 40.00),
+// ('Dental Caries', 'Dentist', 'Comprehensive dental checkup and treatment for cavities.', 30.00),
+// ('Arthritis', 'Rheumatologist', 'Joint pain evaluation and arthritis treatment programs.', 60.00),
+// ('Migraine', 'Neurologist', 'Migraine diagnosis, management, and preventive care.', 55.00),
+// ('Skin Infection', 'Dermatologist', 'Diagnosis and treatment of various skin infections.', 35.00),
+// ('Depression', 'Psychiatrist', 'Mental health consultation and treatment for depression.', 70.00),
+// ('Eye Cataract', 'Ophthalmologist', 'Eye examinations and cataract surgery consultation.', 65.00);`
+
+// _,err = Db.Query(test_data)
+// if err != nil{
+// 	log.Fatalf("failed to insert data int the table %v",err)
+// }
+
 	return nil
 
 }
