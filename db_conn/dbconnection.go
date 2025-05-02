@@ -98,6 +98,19 @@ func Connectionpool(databasesourceName string) error {
 	if _,err = Db.Exec(serviceAvailable); err !=nil{
        log.Fatalf("Failed to create table serviceAvailable :%v ", err)
 	}
+	bookingtracking := `CREATE TABLE IF NOT EXISTS bookingtracking (
+		id SERIAL PRIMARY KEY,
+		deviceId      VARCHAR(255) NOT NULL,
+		service       VARCHAR(255) NOT NULL,
+		booking_time  TIME         NOT NULL,
+		booking_dateFrom  DATE         NOT NULL,
+		booking_dateTo  DATE         NOT NULL,
+		UNIQUE(deviceId, service, booking_dateFrom,booking_dateTo)
+	  );`
+	  
+	  if _,err = Db.Exec(bookingtracking);err != nil{
+		log.Fatalf("Failed to create table bookingTracking :%v", err)
+	  }
 	
 
 	// data instert it  for sample test  
