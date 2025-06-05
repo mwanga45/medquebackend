@@ -113,6 +113,7 @@ func Connectionpool(databasesourceName string) error {
         doctor_id INTEGER REFERENCES doctors(id),
         service_id INTEGER REFERENCES service_tb(id),
         booking_date DATE NOT NULL,
+		dayofweek INTERGER NOT NULL,
         start_time TIME NOT NULL,
         end_time TIME NOT NULL,
         status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
