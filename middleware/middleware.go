@@ -1,4 +1,5 @@
-package auth
+// File: auth/middleware/middleware.go
+package middleware
 
 import (
 	"context"
@@ -11,16 +12,13 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	// "time"
 )
 
-// CustomClaims represents the JWT claims structure
 type CustomClaims struct {
 	Role string `json:"role"`
 }
 
-// verifyTokenMiddleware verifies the JWT token and sets claims in the context
-func verifyTokenMiddleware(next http.Handler) http.Handler {
+func VerifyTokenMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
@@ -42,14 +40,12 @@ func verifyTokenMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Store claims in context
 		ctx := context.WithValue(r.Context(), "user", claims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-// isAuthenticated checks if the user is authenticated
-func isAuthenticated(next http.Handler) http.Handler {
+func IsAuthenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := r.Context().Value("user").(*CustomClaims)
 		if !ok || claims == nil {
@@ -60,8 +56,7 @@ func isAuthenticated(next http.Handler) http.Handler {
 	})
 }
 
-// isAdmin checks if the user has admin role
-func isAdmin(next http.Handler) http.Handler {
+func IsAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := r.Context().Value("user").(*CustomClaims)
 		if !ok || claims == nil || claims.Role != "admin" {
@@ -72,8 +67,7 @@ func isAdmin(next http.Handler) http.Handler {
 	})
 }
 
-// isUser checks if the user has user role
-func isUser(next http.Handler) http.Handler {
+func IsUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := r.Context().Value("user").(*CustomClaims)
 		if !ok || claims == nil || claims.Role != "user" {
@@ -84,7 +78,6 @@ func isUser(next http.Handler) http.Handler {
 	})
 }
 
-// verifyJWT manually verifies a JWT token and returns claims
 func verifyJWT(token string) (*CustomClaims, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
@@ -96,7 +89,6 @@ func verifyJWT(token string) (*CustomClaims, error) {
 		return nil, fmt.Errorf("invalid token format")
 	}
 
-	// Verify signature
 	signature := parts[2]
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(parts[0] + "." + parts[1]))
@@ -106,7 +98,6 @@ func verifyJWT(token string) (*CustomClaims, error) {
 		return nil, fmt.Errorf("invalid signature")
 	}
 
-	// Decode payload
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, fmt.Errorf("invalid payload encoding: %v", err)
@@ -120,17 +111,8 @@ func verifyJWT(token string) (*CustomClaims, error) {
 	return &claims, nil
 }
 
-// jsonError sends a JSON error response
 func jsonError(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
-
-// Example usage in router setup:
-// func main() {
-//     http.Handle("/protected", verifyTokenMiddleware(isAuthenticated(protectedHandler)))
-//     http.Handle("/admin", verifyTokenMiddleware(isAdmin(adminHandler)))
-//     http.Handle("/user", verifyTokenMiddleware(isUser(userHandler)))
-//     log.Fatal(http.ListenAndServe(":8080", nil))
-// }
