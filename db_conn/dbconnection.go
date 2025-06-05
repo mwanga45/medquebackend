@@ -57,8 +57,7 @@ func Connectionpool(databasesourceName string) error {
         start_time TIME NOT NULL,
         end_time TIME NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(doctor_id, day_of_week)
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
 	if _, err = Db.Exec(doctorShedule); err != nil {
