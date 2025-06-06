@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// create struct for http request for registration
+
 type reg_request struct{
 	Firstname  string `json:"firstname" validate:"required"`
 	Secondname string `json:"secondname" validate:"required"`

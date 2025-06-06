@@ -20,7 +20,7 @@ type (
 	Respond struct {
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
-		Data    interface{} `json:"data"`
+		Data    any `json:"data"`
 	}
 	UserbookingRequest struct {
 	   ServiceName string `json:"servicename" validate:"required"`
