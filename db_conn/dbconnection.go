@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"time"
-
 	_ "github.com/lib/pq"
 )
 
@@ -25,6 +24,14 @@ func Connectionpool(databasesourceName string) error {
 	if err = Db.Ping(); err != nil {
 		return err
 	}
+		specialist :=  `CREATE TABLE IF NOT EXISTS specialist (
+  specialist VARCHAR(200)    PRIMARY KEY,
+  description TEXT          
+);
+`
+if _,err = Db.Exec(specialist); err !=nil{
+	log.Fatalf("failed to create table %v", err)
+}
 
 	doctor_tb := `
       CREATE TABLE IF NOT EXISTS doctors (
@@ -32,7 +39,7 @@ func Connectionpool(databasesourceName string) error {
   doctorname       VARCHAR(250) NOT NULL UNIQUE,
   password         VARCHAR(250) NOT NULL,
   email            VARCHAR(250) NOT NULL UNIQUE,
-  specialist       VARCHAR(200),
+  specialist_name       VARCHAR(200),
   phone            VARCHAR(20),
   identification       VARCHAR(250) NOT NULL UNIQUE,
   role             VARCHAR(20) DEFAULT 'dkt',
@@ -49,6 +56,8 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(doctor_tb); err != nil {
 		log.Fatalf("failed to create new table %v", err)
 	}
+
+	
 	const doctorShedule = `
       CREATE TABLE IF NOT EXISTS doctorshedule (
         Shedule_id SERIAL PRIMARY KEY,
@@ -108,11 +117,11 @@ func Connectionpool(databasesourceName string) error {
 	}
 	bookingtracking := `CREATE TABLE IF NOT EXISTS bookingTrack_tb (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        doctor_id INTEGER REFERENCES doctors(id),
-        service_id INTEGER REFERENCES service_tb(id),
+        user_id INTEGER REFERENCES users(user_id),
+        doctor_id INTEGER REFERENCES doctors(doctor_id),
+        service_id INTEGER REFERENCES serviceAvailable(serv_id),
         booking_date DATE NOT NULL,
-		dayofweek INTERGER NOT NULL,
+		dayofweek INTEGER NOT NULL,
         start_time TIME NOT NULL,
         end_time TIME NOT NULL,
         status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),

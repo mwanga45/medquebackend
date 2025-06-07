@@ -15,6 +15,8 @@ import (
 )
 
 type CustomClaims struct {
+	ID string `json:"user_id"`
+	Username string `json:"fullname"`
 	Role string `json:"role"`
 }
 
@@ -110,6 +112,36 @@ func verifyJWT(token string) (*CustomClaims, error) {
 
 	return &claims, nil
 }
+func GenerateJWT(role string, id string, username string) (string, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", fmt.Errorf("JWT_SECRET not set")
+	}
+
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
+
+	
+	claims := CustomClaims{
+		ID :id,
+		Username: username,
+		Role: role,
+	}
+	payloadBytes, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+	payload := base64.RawURLEncoding.EncodeToString(payloadBytes)
+
+	unsignedToken := header + "." + payload
+
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(unsignedToken))
+	signature := base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+
+	token := unsignedToken + "." + signature
+	return token, nil
+}
+
 
 func jsonError(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
