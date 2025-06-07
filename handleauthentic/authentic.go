@@ -30,7 +30,7 @@ reg_request struct{
 response struct{
 	Success bool `json:"success"`
 	Message string `json:"message,omitempty"`
-	Token  string `json:"token, omitempty"`
+	Token  string `json:"token,omitempty"`
 	
 }
 )
