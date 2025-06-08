@@ -285,8 +285,7 @@ func GetService(w http.ResponseWriter, r *http.Request) {
 
     w.Header().Set("Content-Type", "application/json")
 
-    
-    rows, err := handlerconn.Db.Query("SELECT * FROM  serviceavalable")
+    rows, err := handlerconn.Db.Query("SELECT * FROM  serviceAvailable")
     if err != nil {
         log.Printf("Database query error: %v", err)  
         w.WriteHeader(http.StatusInternalServerError)

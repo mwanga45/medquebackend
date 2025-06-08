@@ -51,26 +51,7 @@ type (
 		Sound string `json:"sound"`
 	}
 )
-// func HandleBookingRequest(w http.ResponseWriter, r *http.Request){
-// 	if r.Method != http.MethodPost{
-// 		w.WriteHeader(http.StatusMethodNotAllowed)
-// 		json.NewEncoder(w).Encode(Respond{
-// 			Message: "Method isn`t  allowed",
-// 			Success: false,
-// 		})
-// 		return
-// 	}
-// 	w.Header().Set("Content-Type", "application/json")
-// 	tx, errTx := handlerconn.Db.Begin()
-// 	if errTx  != nil{
-// 		json.NewEncoder(w).Encode(Respond{
-// 			Message: "Server Error failed to Initiate Transaction",
-// 			Success: false,
-// 		})
-// 		return
-// 	}
-// 	if er
-// }
+
 func Booking(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
