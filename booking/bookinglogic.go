@@ -2,11 +2,12 @@ package booking
 
 import (
 	"encoding/json"
+	handlerconn "medquemod/db_conn"
 	"net/http"
 )
 
 type (
-	Bkrequest struct {
+	Bkservrequest struct {
 		ServId       string `json:"servid" validate:"required"`
 		IntervalTime string `json:"timeInter" validate:"required"`
 		Servicename  string `json:"servicename" validate:"required"`
@@ -15,7 +16,15 @@ type (
 	Response struct{
 		Message string
 		Success  bool
-
+	}
+	bkservrespond struct{
+		Doctor string
+		doctorId string
+		Servicename string
+		Start_time string
+		End_time string
+		Dayofweek string
+		fee string
 	}
 
 )
@@ -31,5 +40,19 @@ func bookinglogic(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	 }
-	//  var rs Bkrequest
+	 w.Header().Set("Content-type", "application/json")
+
+	 var bsr Bkservrequest
+	 tx,errTx := handlerconn.Db.Begin() 
+	 if errTx != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "InternaServerError",
+			Success: false,
+		})
+		return
+	 }
+	 
+	 
+
 }
