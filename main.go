@@ -4,16 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"medquemod/api"
-	apiweb "medquemod/api-web"
+
+	// "medquemod/api"
+	// apiweb "medquemod/api-web"
 	"medquemod/booking"
-	"medquemod/bookingtimelogic"
-	handler_chat "medquemod/chatbot"
+	"medquemod/routes"
+	// "medquemod/bookingtimelogic"
+	// handler_chat "medquemod/chatbot"
 	"medquemod/db_conn"
-	"medquemod/handleauthentic"
+	// "medquemod/handleauthentic"
 	"net/http"
 	"os"
 	"os/signal"
+	// "os/user"
 	"syscall"
 	"time"
 
@@ -39,15 +42,16 @@ func main() {
 
 	// Set up router and routes
 	r := mux.NewRouter()
-	r.HandleFunc("/register", authentic.Handler).Methods("POST")
-		r.HandleFunc("/doctorinfo", api.Doctors).Methods("GET")
-		r.HandleFunc("/userinfo", api.Userdetails).Methods("POST")
-		r.HandleFunc("/chatbot",handler_chat.Chatbot).Methods("POST")
-		r.HandleFunc("/verifyuser",api.Verifyuser).Methods("POST")
-		r.HandleFunc("/registerstaff",apiweb.HandleRegisterUser).Methods("POST") //for webapplication
-		r.HandleFunc("/staffsignIn",apiweb.LoginHandler).Methods("POST")//for webapplication
-		r.HandleFunc("/bookinglogic", bookingtimelogic.Timelogic).Methods("GET")
-		r.HandleFunc("/serviceAvailable", api.GetService).Methods("GET")
+	routes.HandleRoutes(r)
+	// r.HandleFunc("/register", authentic.Handler).Methods("POST")
+	// 	r.HandleFunc("/doctorinfo", api.Doctors).Methods("GET")
+	// 	r.HandleFunc("/userinfo", api.Userdetails).Methods("POST")
+	// 	r.HandleFunc("/chatbot",handler_chat.Chatbot).Methods("POST")
+	// 	r.HandleFunc("/verifyuser",api.Verifyuser).Methods("POST")
+	// 	r.HandleFunc("/registerstaff",apiweb.HandleRegisterUser).Methods("POST") //for webapplication
+	// 	r.HandleFunc("/staffsignIn",apiweb.LoginHandler).Methods("POST")//for webapplication
+	// 	r.HandleFunc("/bookinglogic", bookingtimelogic.Timelogic).Methods("GET")
+	// 	r.HandleFunc("/serviceAvailable", api.GetService).Methods("GET")
 		// r.HandleFunc("/bookingrequest", booking.HandleBookingRequest).Methods(("POST"))
 
 	// Configure CORS

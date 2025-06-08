@@ -7,7 +7,6 @@ import (
 	"medquemod/db_conn"
 	"medquemod/middleware"
 	"net/http"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
