@@ -27,6 +27,7 @@ type (
        Time string `json:"time" validate:"required"`
 	   Dayfrom  string `json:"from" validate:"required"`
 	   Dayto  string `json:"to" validate:"required"`
+	   
 	}
 	BookingRequest struct {
 		Username   string    `json:"username" validate:"required"`
