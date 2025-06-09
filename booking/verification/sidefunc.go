@@ -5,10 +5,14 @@ import (
 	"time"
 )
 
-type Timeslot struct{
+type (
+	Timeslot struct{
 	StartTime  string
 	EndTime string
 }
+   
+
+)
 func GenerateTimeSlote(timeInterval int, startTime string, endTime string)([]Timeslot, error) {
 	layout := "15:04"
 	now := time.Now()
@@ -41,4 +45,19 @@ func GenerateTimeSlote(timeInterval int, startTime string, endTime string)([]Tim
    }
    return  slot , nil
 
+}
+func Dayofweek(day int)(string, error){
+	daysname  :=  []string{
+		"Sunday",
+		"Monday",
+		"Tuesday",
+		"Wensday",
+		"Thursday",
+		"Friday",
+		"Saturday",
+	}
+	if day < 0 ||day > 6{
+		return "", fmt.Errorf("the day value should be   range from 0-6")
+	}
+	return daysname[day], nil
 }

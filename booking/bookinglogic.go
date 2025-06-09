@@ -43,6 +43,7 @@ func bookinglogic(w http.ResponseWriter, r *http.Request) {
 	 w.Header().Set("Content-type", "application/json")
 
 	 var bsr Bkservrequest
+	 
 	 tx,errTx := handlerconn.Db.Begin() 
 	 if errTx != nil{
 		w.WriteHeader(http.StatusInternalServerError)
@@ -52,7 +53,7 @@ func bookinglogic(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	 }
-	 
+	 checklist  := tx.QueryRow("")
 	 
 
 }
