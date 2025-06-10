@@ -46,7 +46,7 @@ func GenerateTimeSlote(timeInterval int, startTime string, endTime string)([]Tim
    return  slot , nil
 
 }
-func Dayofweek(day int)(string, error){
+func Dayofweek(day string)(string, error){
 	daysname  :=  []string{
 		"Sunday",
 		"Monday",
@@ -60,4 +60,7 @@ func Dayofweek(day int)(string, error){
 		return "", fmt.Errorf("the day value should be   range from 0-6")
 	}
 	return daysname[day], nil
+}
+func DaytimeofToday(dayoftoday string,dayname string ){
+
 }
