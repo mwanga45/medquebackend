@@ -39,7 +39,7 @@ type (
 	}
 )
 
-func bookinglogic(w http.ResponseWriter, r *http.Request) {
+func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -88,8 +88,8 @@ func bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	
 	now := time.Now()
-	allowedDates := make(map[int]string, 3)
-	for i := 0; i < 3; i++ {
+	allowedDates := make(map[int]string, 4)
+	for i := 0; i < 4; i++ {
 		d := now.Add(time.Duration(i) * 24 * time.Hour)
 		allowedDates[int(d.Weekday())] = d.Format("2006-01-02")
 	}
@@ -120,13 +120,13 @@ func bookinglogic(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// 8) Convert dayInt → weekday name
+		
 		dayName, err := sidefunc.Dayofweek(dayInt)
 		if err != nil {
 			continue
 		}
 
-		// 9) Generate time slots between start and end
+		
 		slots, err := sidefunc.GenerateTimeSlote(durMins, start, end)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -134,7 +134,7 @@ func bookinglogic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// 10) For each slot, filter past‐end‐times for today
+	
 		for _, ts := range slots {
 			if dayInt == todayInt && ts.EndTime <= currentTime {
 				continue
@@ -157,7 +157,6 @@ func bookinglogic(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if status != "" && status != "cancellation" {
-				// already booked
 				continue
 			}
 			results = append(results, bkservrespond{

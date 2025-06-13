@@ -1,7 +1,8 @@
-package routes
+package Routesf_test
 
 import (
 	"medquemod/api"
+	"medquemod/booking"
 	handler_chat "medquemod/chatbot"
 	authentic "medquemod/handleauthentic"
 
@@ -18,9 +19,10 @@ func HandleRoutes(r *mux.Router) {
 	auth.HandleFunc("/chatbot", handler_chat.Chatbot).Methods("POST")
 
 	// booking routers
-	booking := r.PathPrefix("/booking").Subrouter() //subrouter for the booking
+	bookingRoutes := r.PathPrefix("/booking").Subrouter() //subrouter for the booking
 
-	booking.HandleFunc("/getservice", api.GetService).Methods("GET")
+	bookingRoutes.HandleFunc("/getservice", api.GetService).Methods("GET")
+	bookingRoutes.HandleFunc("/serviceslot", booking.Bookinglogic).Methods("POST")
 
 	
 

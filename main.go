@@ -41,7 +41,7 @@ func main() {
 
 	// Set up router and routes
 	r := mux.NewRouter()
-	routes.HandleRoutes(r)
+	Routesf_test.HandleRoutes(r)
 	// r.HandleFunc("/register", authentic.Handler).Methods("POST")
 	// 	r.HandleFunc("/doctorinfo", api.Doctors).Methods("GET")
 	// 	r.HandleFunc("/userinfo", api.Userdetails).Methods("POST")
