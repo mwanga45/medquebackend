@@ -15,6 +15,12 @@ type (
 		Success bool        `json:"success"`
 		Data    interface{} `json:"data,omitempty"`
 	}
+	Createpayload struct{
+		Age int `json:"age"`
+		Firstname string `json:"firstname"`
+		Secondname string `json:"Secondname"`
+		Dial string `json:"dial"`
+	}
 )
 
 func UserAct(w http.ResponseWriter, r *http.Request) {
@@ -60,5 +66,6 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
 
 }
