@@ -40,6 +40,7 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	defer client.Rollback()
 	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
 	if !ok {
 		json.NewEncoder(w).Encode(Response{
@@ -66,6 +67,17 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	var reqpayload Createpayload
+
+	errDec := json.NewDecoder(r.Body).Decode(&reqpayload)
+	if errDec != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal serverError please try again",
+			Success: false,
+		})
+		return
+	} 
+	
 
 
 }

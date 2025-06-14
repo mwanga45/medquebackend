@@ -1,7 +1,7 @@
 package sidefunc_test
 
 import (
-	// "database/sql"
+	"database/sql"
 	"fmt"
 	"time"
 )
@@ -72,3 +72,18 @@ func DaytimeofToday(dayoftoday string,dayname string ){
 // func checkalreadybookedToday(userid string,start_time string, end_time string )  {
 	
 // }
+
+func Checklimit (userid string , tx *sql.DB)(string){
+	checkrow , err := tx.Query(`SELECT username FROM Specialgroup WHERE managedby_id = $1 `, userid)
+	if err != nil{
+		return fmt.Sprint("Something went wrong",err)
+	}
+	defer checkrow.Close()
+	var count int
+	for checkrow.Next(){
+      count ++ 
+	  
+	}
+	
+	return ""
+}
