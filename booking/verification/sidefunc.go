@@ -11,6 +11,9 @@ type (
 	StartTime  string
 	EndTime string
 }
+    Username struct{
+		Usrname string 
+	}
    
 
 )
@@ -78,11 +81,16 @@ func Checklimit (userid string , tx *sql.DB)(string){
 	if err != nil{
 		return fmt.Sprint("Something went wrong",err)
 	}
+	specgroup :=  map[int]string{}
+	var usr Username
 	defer checkrow.Close()
+    checkrow.Scan(usr.Usrname)
 	var count int
 	for checkrow.Next(){
       count ++ 
-	  
+	  if count > 5{
+		return "Sorry you have Already reach limit"
+	  }
 	}
 	
 	return ""
