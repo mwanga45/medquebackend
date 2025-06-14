@@ -13,6 +13,7 @@ type (
 }
     Username struct{
 		Usrname string 
+		SpecId int
 	}
    
 
@@ -75,23 +76,38 @@ func DaytimeofToday(dayoftoday string,dayname string ){
 // func checkalreadybookedToday(userid string,start_time string, end_time string )  {
 	
 // }
+func CheckLimit(userID string, db *sql.DB) (map[int]string, error) {
+	rows, err := db.Query(
+		`SELECT fullname, spec_id FROM Specialgroup WHERE managedby_id = $1`,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %w", err)
+	}
+	defer rows.Close()
 
-func Checklimit (userid string , tx *sql.DB)(string){
-	checkrow , err := tx.Query(`SELECT username FROM Specialgroup WHERE managedby_id = $1 `, userid)
-	if err != nil{
-		return fmt.Sprint("Something went wrong",err)
-	}
-	specgroup :=  map[int]string{}
-	var usr Username
-	defer checkrow.Close()
-    checkrow.Scan(usr.Usrname)
-	var count int
-	for checkrow.Next(){
-      count ++ 
-	  if count > 5{
-		return "Sorry you have Already reach limit"
-	  }
-	}
 	
-	return ""
+	specials := make(map[int]string)
+
+	
+	var count int
+	for rows.Next() {
+		var name string
+		var specID int
+		if err := rows.Scan(&name, &specID); err != nil {
+			return nil, fmt.Errorf("scan error: %w", err)
+		}
+
+		specials[specID] = name
+		count++
+
+		if count > 5 {
+			return specials, fmt.Errorf("limit exceeded: you have already reached the limit of 5 people")
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return specials, fmt.Errorf("iteration error: %w", err)
+	}
+
+	return specials, nil
 }
