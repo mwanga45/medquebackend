@@ -148,8 +148,18 @@ if _,err = Db.Exec(specialist); err !=nil{
 	if _, err = Db.Exec(doctorServ_tb);err !=nil{
       log.Fatalf("Failed to create table doctorServ")
 	}
-
-
+    Specialgroup := `
+	CREATE TABLE IF NOT EXISTS Specialgroup(
+	spec_id SERIAL PRIMARY KEY,
+	managedby_id INTEGER REFERENCES Users(user_id),
+	dialforCreator VARCHAR (20) REFERENCES User(dial),
+	dialforUser VARCHAR (20),
+	Reason TEXT NOT NULL,
+	)
+	`;
+   if _, err = Db.Exec(Specialgroup); err != nil{
+	log.Fatal("Failed to create table specialgroup")
+   }
 	return nil
 
 }

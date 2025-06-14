@@ -1,7 +1,7 @@
 package sidefunc_test
 
 import (
-	"database/sql"
+	// "database/sql"
 	"fmt"
 	"time"
 )
@@ -66,11 +66,9 @@ func DaytimeofToday(dayoftoday string,dayname string ){
 
 }
 
-func CheckBookingforWhom(isforMe bool , tx *sql.DB )(error)  {
-   if !isforMe{
+// func CheckBookingforWhom(isforMe bool , tx *sql.DB )  {
+    
+// }
+// func checkalreadybookedToday(userid string,start_time string, end_time string )  {
 	
-   }
-}
-func checkalreadybookedToday(userid string,start_time string, end_time string )  {
-	
-}
+// }
