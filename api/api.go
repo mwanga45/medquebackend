@@ -138,7 +138,6 @@ func Doctors(w http.ResponseWriter, r *http.Request) {
 }
 
 func Verifyuser(w http.ResponseWriter, r *http.Request) {
-    // 1) Always set JSON header up front
     w.Header().Set("Content-Type", "application/json")
 
     
@@ -273,6 +272,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+// RETURN ALL  THE SERVICE AVALAIBLE
 func GetService(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {
         w.WriteHeader(http.StatusMethodNotAllowed)

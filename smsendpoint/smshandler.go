@@ -18,7 +18,7 @@ type (
 
 	
 	Payload struct {
-		SenderID   string      `json:"sender_id"`              
+		SenderID   int      `json:"sender_id"`              
 		Schedule   string      `json:"schedule"`                
 		Sms        string      `json:"sms"`                     
 		Recipients []Receiver  `json:"recipients"`             
@@ -44,7 +44,7 @@ func SmsEndpoint(username, phone, startAt, endAt string) error {
 	message := fmt.Sprintf("%s, you're expected at the hospital 10 minutes before your appointment. Start: %s, End: %s", username, startAt, endAt)
 
 	payload := Payload{
-		SenderID: "TAARIFA",
+		SenderID: 45,
 		Schedule: "none",
 		Sms:      message,
 		Recipients: []Receiver{{
