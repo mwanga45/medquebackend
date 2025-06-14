@@ -18,6 +18,9 @@ func HandleRoutes(r *mux.Router) {
 	auth.HandleFunc("/login",authentic.HandleLogin).Methods("POST")
 	auth.HandleFunc("/register", authentic.Handler).Methods("POST")
 	auth.HandleFunc("/chatbot", handler_chat.Chatbot).Methods("POST")
+	//  SHEDULE  ROUTER FOR DOCTOR INFORMATION
+	shedule := r.PathPrefix("/info").Subrouter()
+	shedule.HandleFunc("/docAv", api.DoctorsAvailability).Methods("GET")
 
 	// booking routers
 	bookingRoutes := r.PathPrefix("/booking").Subrouter() //subrouter for the booking

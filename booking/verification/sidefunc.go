@@ -20,7 +20,7 @@ func GenerateTimeSlote(timeInterval int, startTime string, endTime string)([]Tim
 	start, err :=  time.ParseInLocation(layout,startTime,now.Location())
 	if err != nil{
 	
-		return nil , fmt.Errorf("Something went wrong", err)
+		return nil , fmt.Errorf("Something went wrong ", err)
 	}
    end, err :=  time.ParseInLocation(layout, endTime, now.Location())
    if err != nil{
