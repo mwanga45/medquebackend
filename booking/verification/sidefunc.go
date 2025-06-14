@@ -11,10 +11,6 @@ type (
 	StartTime  string
 	EndTime string
 }
-    Username struct{
-		Usrname string 
-		SpecId int
-	}
    
 
 )
@@ -25,11 +21,11 @@ func GenerateTimeSlote(timeInterval int, startTime string, endTime string)([]Tim
 	start, err :=  time.ParseInLocation(layout,startTime,now.Location())
 	if err != nil{
 	
-		return nil , fmt.Errorf("Something went wrong ", err)
+		return nil , fmt.Errorf("something went wrong: %w", err)
 	}
    end, err :=  time.ParseInLocation(layout, endTime, now.Location())
    if err != nil{
-	return nil , fmt.Errorf("Something  went wrong ", err)
+	return nil , fmt.Errorf("something  went wrong: %w ", err)
    }
    if end.Before(start){
 	  end = end.Add(24 *time.Hour)
@@ -76,8 +72,8 @@ func DaytimeofToday(dayoftoday string,dayname string ){
 // func checkalreadybookedToday(userid string,start_time string, end_time string )  {
 	
 // }
-func CheckLimit(userID string, db *sql.DB) (map[int]string, error) {
-	rows, err := db.Query(
+func CheckLimit(userID string, client *sql.Tx) (map[int]string, error) {
+	rows, err := client.Query(
 		`SELECT fullname, spec_id FROM Specialgroup WHERE managedby_id = $1`,
 		userID,
 	)

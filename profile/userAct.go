@@ -3,6 +3,8 @@ package profile
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	sidefunc_test "medquemod/booking/verification"
 	handlerconn "medquemod/db_conn"
 	"medquemod/middleware"
 	"net/http"
@@ -77,7 +79,17 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	} 
+	specialnames, err := sidefunc_test.CheckLimit(claims.ID,client)
+	if err != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server Error",
+			Success: false,
+		})
+		fmt.Errorf("something went wrong: %w", err)
+		return
+	}
 	
+
 
 
 }
