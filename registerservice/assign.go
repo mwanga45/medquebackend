@@ -49,4 +49,4 @@ func registerservice(w http.ResponseWriter, r *http.Request) {
 		Message: "Successfuly register new service",
 		Success: true,
 	})
-}
+} 
