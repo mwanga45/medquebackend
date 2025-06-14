@@ -60,7 +60,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		})
 		return
 	}
-	claims, ok := r.Context().Value("user").(middleware.CustomClaims)
+	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
 	if !ok {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Unathorized try to access data",

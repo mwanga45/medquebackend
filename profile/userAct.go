@@ -1,12 +1,15 @@
 package profile
 
 import (
+	"database/sql"
 	"encoding/json"
+	handlerconn "medquemod/db_conn"
+	"medquemod/middleware"
 	"net/http"
 )
 
 type (
-	
+
 	Response struct {
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
@@ -22,6 +25,40 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	client , errTx := handlerconn.Db.Begin()
+	if errTx != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal ServerError",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
+	if !ok {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Unauthorized",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 	
+	var phone string 
+	errcheckId := client.QueryRow(`SELECT dial FROM Users WHERE user_id = $1 `,claims.ID).Scan(phone)
+	if errcheckId != nil{
+		if errcheckId == sql.ErrNoRows{
+			json.NewEncoder(w).Encode(Response{
+				Message: "User doesn`t exist ",
+				Success: false,
+			})
+         return
+		}
+		json.NewEncoder(w).Encode(Response{
+			Message: "Interna ServerError",
+			Success: false,
+		})
+		return
+	}
 
 }
