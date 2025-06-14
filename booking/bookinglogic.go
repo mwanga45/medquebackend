@@ -39,9 +39,24 @@ type (
 		Fee            float64 `json:"fee"`
 	}
 	BKpayload struct{
-		
+		DoctorID  string `json:"doctorId"`
+		Servicename string `json:"servicename"`
+		StartTime  string `json:"start_time"`
+		EndTime string `json:"end_time"`
+		Date string `json:"date"`
 	}
 )
+
+func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
+	if r.Method != http.MethodPost{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid payload",
+			Success: false,
+		})
+	}
+	
+}
 
 func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	
@@ -198,12 +213,4 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodPost{
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Invalid payload",
-			Success: false,
-		})
-	}
-}
+
