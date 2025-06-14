@@ -23,6 +23,7 @@ type (
 	Response struct {
 		Message string `json:"message"`
 		Success bool   `json:"success"`
+		Data interface {} `json:"data,omitempty"`
 	}
 
 	
@@ -37,13 +38,16 @@ type (
 		DurationMinute int     `json:"duration_minutes"`
 		Fee            float64 `json:"fee"`
 	}
+	BKpayload struct{
+		
+	}
 )
 
 func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(Response{"Invalid method", false})
+		json.NewEncoder(w).Encode(Response{Message:"Invalid method", Success: false})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -52,14 +56,14 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	var req Bkservrequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Response{"Invalid payload", false})
+		json.NewEncoder(w).Encode(Response{Message:"Invalid payload", Success: false})
 		return
 	}
 
 	tx, err := handlerconn.Db.Begin()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{"Internal server error", false})
+		json.NewEncoder(w).Encode(Response{Message:"Internal server error",Success:  false})
 		return
 	}
 	defer tx.Rollback()
@@ -81,7 +85,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	`, req.Servicename)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{"Database query error", false})
+		json.NewEncoder(w).Encode(Response{Message:"Database query error", Success: false})
 		return
 	}
 	defer rows.Close()
@@ -130,7 +134,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		slots, err := sidefunc.GenerateTimeSlote(durMins, start, end)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(Response{"Slot generation error", false})
+			json.NewEncoder(w).Encode(Response{Message:"Slot generation error", Success: false})
 			return
 		}
 
@@ -153,7 +157,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 			if err != nil && err != sql.ErrNoRows {
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(Response{"Booking lookup error", false})
+				json.NewEncoder(w).Encode(Response{Message:"Booking lookup error",Success:  false})
 				return
 			}
 			if status != "" && status != "cancellation" {
@@ -175,17 +179,31 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	if err := rows.Err(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{"Rows iteration error", false})
+		json.NewEncoder(w).Encode(Response{Message:"Rows iteration error",Success:  false})
 		return
 	}
 
 
 	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{"Failed to commit", false})
+		json.NewEncoder(w).Encode(Response{Message:"Failed to commit", Success: false})
 		return
 	}
 
 	
-	json.NewEncoder(w).Encode(results)
+	json.NewEncoder(w).Encode(Response{
+		Message: "Succesfuly",
+		Success: true,
+		Data: results,
+	})
+}
+
+func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
+	if r.Method != http.MethodPost{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid payload",
+			Success: false,
+		})
+	}
 }

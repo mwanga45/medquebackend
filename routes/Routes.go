@@ -9,7 +9,6 @@ import (
 
 	"github.com/gorilla/mux"
 )
-
 func HandleRoutes(r *mux.Router) {
 
 	auth:= r.PathPrefix("/auth").Subrouter() //subrouter for the authentication
@@ -30,7 +29,6 @@ func HandleRoutes(r *mux.Router) {
 
 	// ROUTES FOR THE ADMIN
 	Adm := r.PathPrefix("/adim").Subrouter()
-
 	Adm.HandleFunc("/registerserv",Service.Registerserv ).Methods("POST")
 
 }
