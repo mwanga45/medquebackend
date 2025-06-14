@@ -96,7 +96,6 @@ json.NewEncoder(w).Encode(response{
 	Token: token,
 })
 
-
 }
 
 

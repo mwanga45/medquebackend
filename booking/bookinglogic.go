@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	handlerconn "medquemod/db_conn"
 	sidefunc "medquemod/booking/verification"
+	handlerconn "medquemod/db_conn"
+	"medquemod/middleware"
 )
 
 type (
@@ -18,7 +19,7 @@ type (
 		IntervalTime string `json:"timeInter"   validate:"required"`
 		Servicename  string `json:"servicename" validate:"required"`
 	}
-
+    
 	
 	Response struct {
 		Message string `json:"message"`
@@ -45,6 +46,11 @@ type (
 		EndTime string `json:"end_time"`
 		Date string `json:"date"`
 	}
+	// Extract struct{
+	// 	UserId string 
+	// 	UserRole string
+	// 	Username string
+	// }
 )
 
 func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
@@ -54,6 +60,41 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 			Message: "Invalid payload",
 			Success: false,
 		})
+		return
+	}
+	claims, ok := r.Context().Value("user").(middleware.CustomClaims)
+	if !ok {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Unathorized try to access data",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+    var(Username, UserId, UserRole string) 
+	UserRole = claims.Role
+	UserId = claims.ID
+	Username = claims.Username
+	client,errTx := handlerconn.Db.Begin()
+	if errTx != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal serverError",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer client.Rollback()
+    var phone string
+	checkuserexist := client.QueryRow(`SELECT dial FROM Users WHERE username = $1 AND user_id = $2 AND user_type = $3`, Username, UserId, UserRole).Scan(phone)
+	if checkuserexist != nil{
+		if checkuserexist == sql.ErrNoRows{
+			json.NewEncoder(w).Encode(Response{
+				Message: "User not exists",
+				Success: false,
+			})
+			return
+		}
 	}
 	
 }
@@ -65,7 +106,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{Message:"Invalid method", Success: false})
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type","application/json")
 
 
 	var req Bkservrequest
