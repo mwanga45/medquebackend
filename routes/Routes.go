@@ -5,6 +5,7 @@ import (
 	"medquemod/booking"
 	handler_chat "medquemod/chatbot"
 	authentic "medquemod/handleauthentic"
+	"medquemod/registerservice"
 
 	"github.com/gorilla/mux"
 )
@@ -24,6 +25,9 @@ func HandleRoutes(r *mux.Router) {
 	bookingRoutes.HandleFunc("/getservice", api.GetService).Methods("GET")
 	bookingRoutes.HandleFunc("/serviceslot", booking.Bookinglogic).Methods("POST")
 
-	
+	// ROUTES FOR THE ADMIN
+	Adm := r.PathPrefix("/adim").Subrouter()
+
+	Adm.HandleFunc("/registerserv",Service.Registerserv ).Methods("POST")
 
 }

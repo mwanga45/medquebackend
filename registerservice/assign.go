@@ -1,4 +1,4 @@
-package registerservice
+package Service
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ type (
 
 )
 
-func registerservice(w http.ResponseWriter, r *http.Request) {
+func Registerserv(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost{
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Respond{
