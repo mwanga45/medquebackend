@@ -1,6 +1,7 @@
 package sidefunc_test
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 )
@@ -63,4 +64,13 @@ func Dayofweek(day int)(string, error){
 }
 func DaytimeofToday(dayoftoday string,dayname string ){
 
+}
+
+func CheckBookingforWhom(isforMe bool , tx *sql.DB )(error)  {
+   if !isforMe{
+	
+   }
+}
+func checkalreadybookedToday(userid string,start_time string, end_time string )  {
+	
 }

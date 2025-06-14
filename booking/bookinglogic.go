@@ -3,6 +3,7 @@ package booking
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -45,12 +46,9 @@ type (
 		StartTime  string `json:"start_time"`
 		EndTime string `json:"end_time"`
 		Date string `json:"date"`
+		ForMe bool `json:"forme"`
 	}
-	// Extract struct{
-	// 	UserId string 
-	// 	UserRole string
-	// 	Username string
-	// }
+
 )
 
 func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
@@ -96,7 +94,18 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 			return
 		}
 	}
-	
+	var bkreq BKpayload
+	err := json.NewDecoder(r.Body).Decode(&bkreq)
+	if err !=nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "InterserverError",
+			Success: false,
+		})
+		log.Printf("Something went wrong: %v", err)
+		return
+	}
+
+
 }
 
 func Bookinglogic(w http.ResponseWriter, r *http.Request) {
