@@ -105,7 +105,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 	// if !bkreq.ForMe{
-		
 
 	// }
 
@@ -136,10 +135,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
-	
-	if 
-
-
 	rows, err := tx.Query(`
 		SELECT 
 		  dk.doctor_id,
