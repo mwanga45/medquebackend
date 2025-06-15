@@ -152,6 +152,7 @@ if _,err = Db.Exec(specialist); err !=nil{
 	CREATE TABLE IF NOT EXISTS Specialgroup(
 	spec_id SERIAL PRIMARY KEY,
 	Username  VARCHAR (200),
+	secretkey VARCHAR(200),
 	Age INTERGER ,
 	managedby_id INTEGER REFERENCES Users(user_id),
 	dialforCreator VARCHAR (20) REFERENCES User(dial),

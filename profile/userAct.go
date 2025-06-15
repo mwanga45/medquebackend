@@ -22,6 +22,7 @@ type (
 		Firstname string `json:"firstname"`
 		Secondname string `json:"Secondname"`
 		Dial string `json:"dial"`
+		Secretkey string `json:"secretkey"`
 		Reason string `json:"reason"`
 	}
 )
@@ -94,7 +95,7 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
  
 	Username := fmt.Sprint(reqpayload.Firstname + " " + reqpayload.Secondname)
 	var newspecId int
-	 InsertError := client.QueryRow(`INSERT INTO Specialgroup (Username, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6) RETURNING spec_id`,Username, reqpayload.Age,Phone,reqpayload.Dial,reqpayload.Reason).Scan(&newspecId)
+	 InsertError := client.QueryRow(`INSERT INTO Specialgroup (Username,secretkey, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6) RETURNING spec_id`,Username,reqpayload.Secretkey, reqpayload.Age,Phone,reqpayload.Dial,reqpayload.Reason).Scan(&newspecId)
     
 	if InsertError != nil {
 		json.NewEncoder(w).Encode(Response{
