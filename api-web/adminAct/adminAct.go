@@ -14,11 +14,17 @@ type (
 		DurationMin int     `json:"duration_time"`
 		Fee         float64 `json:"fee"`
 	}
-	
+
 	Response struct {
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
 		Data    interface{} `json:"data,omitempty"`
+	}
+	Asdocshedulepayload struct{
+		DoctorID int `json:"docId"`
+		Dayofweek int `json:"dow"`
+		StartTime  string `json:"start_time"`
+		EndTime string `json:"end_time"`
 	}
 )
 
@@ -28,7 +34,7 @@ func AssignService(w http.ResponseWriter, r *http.Request) {
 			Message: "Invalidpayload",
 			Success: false,
 		})
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -65,6 +71,15 @@ func AssignService(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func ()  {
-	
+func Asdocshedule(w http.ResponseWriter, r *http.Request)  {
+	if r.Method != http.MethodPost{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Badrequest",
+			Success: false,
+		})
+		return
+	}
+
+
 }

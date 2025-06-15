@@ -2,10 +2,10 @@ package Routesf_test
 
 import (
 	"medquemod/api"
+	adminact "medquemod/api-web/adminAct"
 	"medquemod/booking"
 	handler_chat "medquemod/chatbot"
 	authentic "medquemod/handleauthentic"
-	"medquemod/registerservice"
 
 	"github.com/gorilla/mux"
 )
@@ -29,6 +29,9 @@ func HandleRoutes(r *mux.Router) {
 
 	// ROUTES FOR THE ADMIN
 	Adm := r.PathPrefix("/adim").Subrouter()
-	Adm.HandleFunc("/registerserv",Service.Registerserv ).Methods("POST")
+	Adm.HandleFunc("/registerserv",adminact.AssignService ).Methods("POST")
+	
+
+	
 
 }
