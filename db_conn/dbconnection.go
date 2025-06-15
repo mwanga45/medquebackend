@@ -118,7 +118,7 @@ if _,err = Db.Exec(specialist); err !=nil{
 	bookingtracking := `CREATE TABLE IF NOT EXISTS bookingTrack_tb (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(user_id),
-		booked_for_id INTERGER REFERENCES Users(user_id)
+		spec_id INTEGER REFERENCES Specialgroup(spec_id),
         doctor_id INTEGER REFERENCES doctors(doctor_id),
         service_id INTEGER REFERENCES serviceAvailable(serv_id),
         booking_date DATE NOT NULL,

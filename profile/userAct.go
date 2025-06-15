@@ -125,7 +125,6 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	specialnames[newspecId] = Username
-
 	json.NewEncoder(w).Encode(Response{
 		Message: "successfully create new user",
 		Success: true,

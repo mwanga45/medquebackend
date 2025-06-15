@@ -104,7 +104,9 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		log.Printf("Something went wrong: %v", err)
 		return
 	}
-	
+	if !bkreq.ForMe{
+		
+	}
 
 
 }

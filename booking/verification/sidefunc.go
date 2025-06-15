@@ -71,9 +71,37 @@ func DaytimeofToday(dayoftoday string,dayname string ){
 // func CheckBookingforWhom(isforMe bool , tx *sql.DB )  {
     
 // }
-// func checkalreadybookedToday(userid string,start_time string, end_time string )  {
-	
-// }
+func CheckalreadybookedToday(userid string, date string, tx *sql.Tx )(bool,error)  {
+	var (
+		start_time string
+		end_time string
+		user_id int
+		day_of_week int
+		spec_id int
+	)
+	var isExist bool
+	row,errorcheck :=  tx.Query(`SELECT user_id , start_time, end_time, dayofweek , spec_id WHERE booking_date = $1 AND user_id = $2`,date,userid)
+	defer row.Close()
+	if errorcheck != nil{
+		if errorcheck == sql.ErrNoRows{
+			return !isExist, nil  
+		}
+		return isExist, errorcheck
+	}
+	// check if is exist but  userId is used make are booking to another specgroup
+
+	for row.Next(){
+      errScan := row.Scan(&user_id, &start_time,&end_time,&day_of_week,spec_id )
+	  if errScan != nil{
+		fmt.Println("Something went wrong", errScan)
+		return isExist, errors.New("Internal serverError")
+	  }
+	  if spec_id !={
+
+	  }
+
+	}
+}
 func CheckLimit(userID string, client *sql.Tx) (map[int]string, error) {
 	rows, err := client.Query(
 		`SELECT fullname, spec_id FROM Specialgroup WHERE managedby_id = $1`,
