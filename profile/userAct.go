@@ -34,6 +34,7 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	client , errTx := handlerconn.Db.Begin()
 	if errTx != nil{
 		json.NewEncoder(w).Encode(Response{
@@ -85,25 +86,39 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal Server Error",
 			Success: false,
-			Data: err,
+			Data: err.Error(),
 		})
-		fmt.Errorf("something went wrong: %w", err)
+		fmt.Println("something went wrong", err)
 		return
 	}
  
 	Username := fmt.Sprint(reqpayload.Firstname + " " + reqpayload.Secondname)
-	_, err = client.Exec(`INSERT INTO Specialgroup (Username, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6)`,Username, reqpayload.Age,Phone,reqpayload.Dial,reqpayload.Reason)
-
-	if err != nil {
+	var newspecId int
+	 InsertError := client.QueryRow(`INSERT INTO Specialgroup (Username, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6) RETURNING spec_id`,Username, reqpayload.Age,Phone,reqpayload.Dial,reqpayload.Reason).Scan(&newspecId)
+    
+	if InsertError != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Failed to Create new user, Internal ServerERROR",
 			Success: false,
-
+			
 		})
-		
+		fmt.Println("something went wrong", err)
 		return
 	}
+	
+	if errcommit := client.Commit(); errcommit != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal ServerError",
+			Success: false,
+		})
+	    fmt.Println("something went wrong", errcommit)
+		return
+	}
+	specialnames[newspecId] = Username
 
-
-
+	json.NewEncoder(w).Encode(Response{
+		Message: "successfully create new user",
+		Success: true,
+		Data:specialnames,
+	})
 }
