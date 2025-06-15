@@ -6,6 +6,8 @@ import (
 	"fmt"
 	handlerconn "medquemod/db_conn"
 	"net/http"
+
+	"golang.org/x/tools/go/analysis/checker"
 )
 
 type (
@@ -20,11 +22,15 @@ type (
 		Success bool        `json:"success"`
 		Data    interface{} `json:"data,omitempty"`
 	}
-	Asdocshedulepayload struct{
-		DoctorID int `json:"docId"`
-		Dayofweek int `json:"dow"`
-		StartTime  string `json:"start_time"`
-		EndTime string `json:"end_time"`
+	Asdocshedulepayload struct {
+		DoctorID  int    `json:"docId"`
+		Dayofweek int    `json:"dow"`
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
+	}
+	AsdocServ struct{
+     DoctorID string `json:"docID"`
+	 ServiceID string `json:"servID"`
 	}
 )
 
@@ -65,14 +71,13 @@ func AssignService(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{
 		Message: "Servecename is already exist",
 		Success: false,
-		Data: serv_id,
+		Data:    serv_id,
 	})
-
 
 }
 
-func Asdocshedule(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodPost{
+func Asdocshedule(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Badrequest",
@@ -80,31 +85,31 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request)  {
 		})
 		return
 	}
-    var shereq Asdocshedulepayload
+	var shereq Asdocshedulepayload
 
 	json.NewDecoder(r.Body).Decode(&shereq)
 	var isExist bool
 
-	errcheck := handlerconn.Db.QueryRow(`SELECT 1 FROM doctors WHERE doctor_id = $1`,shereq.DoctorID).Scan(&isExist)
-	if errcheck != nil{
+	errcheck := handlerconn.Db.QueryRow(`SELECT 1 FROM doctors WHERE doctor_id = $1`, shereq.DoctorID).Scan(&isExist)
+	if errcheck != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal serverError",
 			Success: false,
 		})
-		fmt.Println("failed to execute query",errcheck)
+		fmt.Println("failed to execute query", errcheck)
 	}
-	if isExist{
+	if isExist {
 		json.NewEncoder(w).Encode(Response{
 			Message: " Staff(doctor) is not yet exist in the system",
 			Success: false,
-			Data: shereq.DoctorID,
+			Data:    shereq.DoctorID,
 		})
 		return
 	}
-	_,errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time)`,shereq.DoctorID,shereq.Dayofweek,shereq.StartTime,shereq.EndTime)
-	if errexec != nil{
+	_, errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time)`, shereq.DoctorID, shereq.Dayofweek, shereq.StartTime, shereq.EndTime)
+	if errexec != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-        json.NewEncoder(w).Encode(Response{
+		json.NewEncoder(w).Encode(Response{
 			Message: "Something went wrong",
 			Success: false,
 		})
@@ -113,8 +118,41 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request)  {
 	json.NewEncoder(w).Encode(Response{
 		Message: "Successfuly assign new staff shedule",
 		Success: true,
-		Data: shereq.DoctorID,
+		Data:    shereq.DoctorID,
 	})
+}
 
+func AssignDocService(w http.ResponseWriter, r *http.Request){
+	if r.Method != http.MethodPost{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Badrequest",
+			Success: false,
+		})
+		return
+	}
+	var asservreq AsdocServ
+	var isdocExist, isservExist bool
+	json.NewDecoder(r.Body).Decode(&asservreq)
+
+	checker := handlerconn.Db.QueryRow(`SELECT 1 FROM doctors WHERE doctor_id = $1`,asservreq.DoctorID).Scan(&isdocExist)
+	if checker != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal ServerError",
+			Success: false,
+		})
+		fmt.Println("Failed to check if doc exist", checker)
+		return
+	}
+	checker = handlerconn.Db.QueryRow(`SELECT 1 FROM serviceAvailable WHERE serv_id = $1`,asservreq.ServiceID).Scan(&isservExist)
+	if checker != nil{
+				json.NewEncoder(w).Encode(Response{
+			Message: "Internal ServerError",
+			Success: false,
+		})
+		fmt.Println("Failed to check if serv exist",checker)
+		return
+		
+	}
 
 }

@@ -2,9 +2,9 @@ package handlerconn
 
 import (
 	"database/sql"
+	_ "github.com/lib/pq"
 	"log"
 	"time"
-	_ "github.com/lib/pq"
 )
 
 var Db *sql.DB
@@ -24,14 +24,14 @@ func Connectionpool(databasesourceName string) error {
 	if err = Db.Ping(); err != nil {
 		return err
 	}
-		specialist :=  `CREATE TABLE IF NOT EXISTS specialist (
+	specialist := `CREATE TABLE IF NOT EXISTS specialist (
   specialist VARCHAR(200)    PRIMARY KEY,
   description TEXT          
 );
 `
-if _,err = Db.Exec(specialist); err !=nil{
-	log.Fatalf("failed to create table %v", err)
-}
+	if _, err = Db.Exec(specialist); err != nil {
+		log.Fatalf("failed to create table %v", err)
+	}
 
 	doctor_tb := `
       CREATE TABLE IF NOT EXISTS doctors (
@@ -57,7 +57,6 @@ if _,err = Db.Exec(specialist); err !=nil{
 		log.Fatalf("failed to create new table %v", err)
 	}
 
-	
 	const doctorShedule = `
       CREATE TABLE IF NOT EXISTS doctorshedule (
         Shedule_id SERIAL PRIMARY KEY,
@@ -68,7 +67,7 @@ if _,err = Db.Exec(specialist); err !=nil{
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `;
+    `
 	if _, err = Db.Exec(doctorShedule); err != nil {
 		log.Fatalf("failed to create new table %v", err)
 	}
@@ -111,7 +110,7 @@ if _,err = Db.Exec(specialist); err !=nil{
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `;
+    `
 	if _, err = Db.Exec(serviceAvailable); err != nil {
 		log.Fatalf("Failed to create table serviceAvailable :%v ", err)
 	}
@@ -130,7 +129,7 @@ if _,err = Db.Exec(specialist); err !=nil{
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(doctor_id, booking_date, start_time)
       )
-    `;
+    `
 
 	if _, err = Db.Exec(bookingtracking); err != nil {
 		log.Fatalf("Failed to create table bookingTracking :%v", err)
@@ -139,16 +138,16 @@ if _,err = Db.Exec(specialist); err !=nil{
 	doctorServ_tb := `
 	   CREATE TABLE IF NOT EXISTS doctor_services (
         id SERIAL PRIMARY KEY,
-        doctor_id INTEGER REFERENCES doctors(  doctor_id ),
+        doctor_id INTEGER REFERENCES doctors(doctor_id),
         service_id INTEGER REFERENCES serviceAvailable(serv_id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(doctor_id, service_id)
       )
-    `;
-	if _, err = Db.Exec(doctorServ_tb);err !=nil{
-      log.Fatalf("Failed to create table doctorServ")
+    `
+	if _, err = Db.Exec(doctorServ_tb); err != nil {
+		log.Fatalf("Failed to create table doctorServ")
 	}
-    Specialgroup := `
+	Specialgroup := `
 	CREATE TABLE IF NOT EXISTS Specialgroup(
 	spec_id SERIAL PRIMARY KEY,
 	Username  VARCHAR (200),
@@ -159,10 +158,10 @@ if _,err = Db.Exec(specialist); err !=nil{
 	dialforUser VARCHAR (20),
 	reason TEXT NOT NULL
 	)
-	`;
-   if _, err = Db.Exec(Specialgroup); err != nil{
-	log.Fatal("Failed to create table specialgroup")
-   }
+	`
+	if _, err = Db.Exec(Specialgroup); err != nil {
+		log.Fatal("Failed to create table specialgroup")
+	}
 	return nil
 
 }
