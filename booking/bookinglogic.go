@@ -16,21 +16,18 @@ import (
 )
 
 type (
-	
 	Bkservrequest struct {
 		ServId       string `json:"servid"      validate:"required"`
 		IntervalTime string `json:"timeInter"   validate:"required"`
 		Servicename  string `json:"servicename" validate:"required"`
 	}
-    
-	
+
 	Response struct {
-		Message string `json:"message"`
-		Success bool   `json:"success"`
-		Data interface {} `json:"data,omitempty"`
+		Message string      `json:"message"`
+		Success bool        `json:"success"`
+		Data    interface{} `json:"data,omitempty"`
 	}
 
-	
 	bkservrespond struct {
 		DoctorName     string  `json:"doctorName"`
 		DoctorID       int     `json:"doctorId"`
@@ -42,20 +39,20 @@ type (
 		DurationMinute int     `json:"duration_minutes"`
 		Fee            float64 `json:"fee"`
 	}
-	BKpayload struct{
+	BKpayload struct {
 		DoctorID  string `json:"doctorId"`
 		ServiceID string `json:"serviceId"`
-		StartTime  string `json:"start_time"`
-		EndTime string `json:"end_time"`
-		Date string `json:"date"`
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
+		Date      string `json:"date"`
 		Dayofweek string `jsom:"dayofweek"`
-		ForMe bool `json:"forme"`
+		ForMe     bool   `json:"forme"`
+		Specname  string `json:"specname"`
 	}
-
 )
 
-func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodPost{
+func Bookingpayload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalid payload",
@@ -72,12 +69,14 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-    var(Username, UserId, UserRole string) 
+	var (
+		Username, UserId, UserRole string
+	)
 	UserRole = claims.Role
 	UserId = claims.ID
 	Username = claims.Username
-	client,errTx := handlerconn.Db.Begin()
-	if errTx != nil{
+	client, errTx := handlerconn.Db.Begin()
+	if errTx != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal serverError",
 			Success: false,
@@ -86,10 +85,10 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 	defer client.Rollback()
-    var phone string
+	var phone string
 	checkuserexist := client.QueryRow(`SELECT dial FROM Users WHERE username = $1 AND user_id = $2 AND user_type = $3`, Username, UserId, UserRole).Scan(phone)
-	if checkuserexist != nil{
-		if checkuserexist == sql.ErrNoRows{
+	if checkuserexist != nil {
+		if checkuserexist == sql.ErrNoRows {
 			json.NewEncoder(w).Encode(Response{
 				Message: "User not exists",
 				Success: false,
@@ -99,7 +98,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 	}
 	var bkreq BKpayload
 	err := json.NewDecoder(r.Body).Decode(&bkreq)
-	if err !=nil{
+	if err != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "InterserverError",
 			Success: false,
@@ -107,7 +106,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		log.Printf("Something went wrong: %v", err)
 		return
 	}
-	daynumber , err := sidefunc_test.DayOfWeekReverse(bkreq.Dayofweek)
+	daynumber, err := sidefunc_test.DayOfWeekReverse(bkreq.Dayofweek)
 	if err != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalidpayload",
@@ -115,54 +114,72 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		})
 		return
 	}
-    if bkreq.ForMe{
-	 _,errbk := client.Exec(`INSERT INTO bookingTrack_tb (user_id, doctor_id, service_id, booking_date,dayofweek,start_time,end_time, status)`,UserId,bkreq.DoctorID,bkreq.ServiceID,bkreq.Date,daynumber,bkreq.StartTime,bkreq.EndTime, "completed") 
-	 if errbk != nil{
-		json.NewEncoder(w).Encode(Response{
-			Message: "Internal serverError",
-			Success: false,
-		})
-		fmt.Println("something went wrong", errbk)
-		return
-	 }
-	errsms := smsendpoint.SmsEndpoint(Username,phone,bkreq.StartTime,bkreq.EndTime)
-	if errsms != nil{
-		json.NewEncoder(w).Encode(Response{
-			Message: "Internal ServerError",
-			Success: false,
-		})
-		fmt.Println("Something went wrong", errsms)
-		return
-	}
+	if bkreq.ForMe {
+		isExist, errorfunc := sidefunc_test.CheckalreadybookedToday(UserId, bkreq.Date, client)
+		if errorfunc != nil {
+			json.NewEncoder(w).Encode(Response{
+				Message: "Internal serverError",
+				Success: false,
+			})
+			fmt.Println("something went wrong", errorfunc)
+			return
+		}
+		if isExist {
+			_, errbk := client.Exec(`INSERT INTO bookingTrack_tb (user_id, doctor_id, service_id, booking_date,dayofweek,start_time,end_time, status)`, UserId, bkreq.DoctorID, bkreq.ServiceID, bkreq.Date, daynumber, bkreq.StartTime, bkreq.EndTime, "completed")
+			if errbk != nil {
+				json.NewEncoder(w).Encode(Response{
+					Message: "Internal serverError",
+					Success: false,
+				})
+				fmt.Println("something went wrong", errbk)
+				return
+			}
+			errsms := smsendpoint.SmsEndpoint(Username, phone, bkreq.StartTime, bkreq.EndTime)
+			if errsms != nil {
+				json.NewEncoder(w).Encode(Response{
+					Message: "Internal ServerError",
+					Success: false,
+				})
+				fmt.Println("Something went wrong", errsms)
+				return
+			}
+		}
+
 	}else if !bkreq.ForMe{
-      
+		var hashedsecretkey string
+		errRow := client.QueryRow(`SELECT secretkey FROM Specialgroup WHERE Username = $1 AND manageby_id = $2`, bkreq.Specname, UserId).Scan(hashedsecretkey)
+		if errRow != nil{
+			json.NewEncoder(w).Encode(Response{
+				Message: "Internal serverError",
+				Success: false,
+			})
+			fmt.Println("failed to return row", errRow)
+			return
+		}
 	}
-
-
 
 }
 
 func Bookinglogic(w http.ResponseWriter, r *http.Request) {
-	
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(Response{Message:"Invalid method", Success: false})
+		json.NewEncoder(w).Encode(Response{Message: "Invalid method", Success: false})
 		return
 	}
-	w.Header().Set("Content-Type","application/json")
-
+	w.Header().Set("Content-Type", "application/json")
 
 	var req Bkservrequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Response{Message:"Invalid payload", Success: false})
+		json.NewEncoder(w).Encode(Response{Message: "Invalid payload", Success: false})
 		return
 	}
 
 	tx, err := handlerconn.Db.Begin()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message:"Internal server error",Success:  false})
+		json.NewEncoder(w).Encode(Response{Message: "Internal server error", Success: false})
 		return
 	}
 	defer tx.Rollback()
@@ -182,12 +199,11 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	`, req.Servicename)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message:"Database query error", Success: false})
+		json.NewEncoder(w).Encode(Response{Message: "Database query error", Success: false})
 		return
 	}
 	defer rows.Close()
 
-	
 	now := time.Now()
 	allowedDates := make(map[int]string, 4)
 	for i := 0; i < 4; i++ {
@@ -199,49 +215,43 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	var results []bkservrespond
 
-
 	for rows.Next() {
 		var (
-			docID       int
-			docName     string
-			dayInt      int
-			start, end  string
-			durMins     int
-			fee         float64
+			docID      int
+			docName    string
+			dayInt     int
+			start, end string
+			durMins    int
+			fee        float64
 		)
 		if err := rows.Scan(&docID, &docName, &dayInt, &start, &end, &durMins, &fee); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(Response{Message:"Scan error", Success: false})
+			json.NewEncoder(w).Encode(Response{Message: "Scan error", Success: false})
 			return
 		}
 
-	
 		dateStr, ok := allowedDates[dayInt]
 		if !ok {
 			continue
 		}
 
-		
 		dayName, err := sidefunc_test.Dayofweek(dayInt)
 		if err != nil {
 			continue
 		}
 
-		
 		slots, err := sidefunc_test.GenerateTimeSlote(durMins, start, end)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(Response{Message:"Slot generation error", Success: false})
+			json.NewEncoder(w).Encode(Response{Message: "Slot generation error", Success: false})
 			return
 		}
 
-	
 		for _, ts := range slots {
 			if dayInt == todayInt && ts.EndTime <= currentTime {
 				continue
 			}
 
-		
 			var status string
 			err := tx.QueryRow(`
 				SELECT status 
@@ -254,7 +264,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 			if err != nil && err != sql.ErrNoRows {
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(Response{Message:"Booking lookup error",Success:  false})
+				json.NewEncoder(w).Encode(Response{Message: "Booking lookup error", Success: false})
 				return
 			}
 			if status != "" && status != "cancellation" {
@@ -276,23 +286,19 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	if err := rows.Err(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message:"Rows iteration error",Success:  false})
+		json.NewEncoder(w).Encode(Response{Message: "Rows iteration error", Success: false})
 		return
 	}
-
 
 	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message:"Failed to commit", Success: false})
+		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
 		return
 	}
 
-	
 	json.NewEncoder(w).Encode(Response{
 		Message: "Succesfuly",
 		Success: true,
-		Data: results,
+		Data:    results,
 	})
 }
-
-

@@ -102,7 +102,6 @@ func CheckalreadybookedToday(userid string, date string, tx *sql.Tx) (bool, erro
 	rows, err := tx.Query(query, date, userid)
 	if err != nil {
 		if err == sql.ErrNoRows {
-
 			return false, nil
 		}
 
