@@ -15,6 +15,7 @@ type (
 	Response struct {
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
+		Erroruser string     `json:"error"`
 		Data    interface{} `json:"data,omitempty"`
 	}
 	Createpayload struct{
@@ -101,9 +102,15 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Failed to Create new user, Internal ServerERROR",
 			Success: false,
-			
 		})
 		fmt.Println("something went wrong", err)
+		return
+	}
+	if errsecretkey := sidefunc_test.ValidateSecretkey(reqpayload.Secretkey); errsecretkey != nil{
+		json.NewEncoder(w).Encode(Response{
+			Erroruser: errsecretkey.Error(),
+			Success: false,
+		})
 		return
 	}
 	
