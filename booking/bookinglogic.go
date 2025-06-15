@@ -13,6 +13,8 @@ import (
 	handlerconn "medquemod/db_conn"
 	"medquemod/middleware"
 	"medquemod/smsendpoint"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type (
@@ -48,6 +50,7 @@ type (
 		Dayofweek string `jsom:"dayofweek"`
 		ForMe     bool   `json:"forme"`
 		Specname  string `json:"specname"`
+		Speckey   string `json:"speckey"`
 	}
 )
 
@@ -145,10 +148,19 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-	}else if !bkreq.ForMe{
+	} else if !bkreq.ForMe {
 		var hashedsecretkey string
-		errRow := client.QueryRow(`SELECT secretkey FROM Specialgroup WHERE Username = $1 AND manageby_id = $2`, bkreq.Specname, UserId).Scan(hashedsecretkey)
-		if errRow != nil{
+		var spec_id string
+		errRow := client.QueryRow(`SELECT secretkey FROM Specialgroup WHERE Username = $1 AND manageby_id = $2`, bkreq.Specname, UserId).Scan(&hashedsecretkey,&spec_id)
+		if errRow != nil {
+			if err == sql.ErrNoRows {
+				fmt.Println("no such special-group entry for user", err)
+				json.NewEncoder(w).Encode(Response{
+					Message: "Invalid payload",
+					Success: false,
+				})
+				return
+			}
 			json.NewEncoder(w).Encode(Response{
 				Message: "Internal serverError",
 				Success: false,
@@ -156,6 +168,33 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("failed to return row", errRow)
 			return
 		}
+		errcomparedhash := bcrypt.CompareHashAndPassword([]byte(hashedsecretkey), []byte(bkreq.Speckey))
+		if errcomparedhash != nil {
+			json.NewEncoder(w).Encode(Response{
+				Message: "Invalid payload or Internal serverError try again",
+				Success: false,
+			})
+			fmt.Println("something went wrong ", errcomparedhash)
+			return
+		}
+		_, errexec := client.Exec(`INSERT INTO bookingTrack_tb (user_id, spec_id , doctor_id, service_id, booking_date, dayofweek, start_time, end_time, status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,UserId,spec_id,bkreq.DoctorID,bkreq.ServiceID,bkreq.Date,bkreq.StartTime,bkreq.EndTime,"completed")
+		if errexec != nil{
+			json.NewEncoder(w).Encode(Response{
+				Message: "Internal ServerError",
+				Success: false,
+			})
+			fmt.Println("something went wrong failed to execute query", errexec)
+		}
+		errsms := smsendpoint.SmsEndpoint(bkreq.Specname,phone,bkreq.StartTime,bkreq.EndTime)
+		if errsms != nil{
+			json.NewEncoder(w).Encode(Response{
+				Message: "InternetError",
+				Success: false,
+			})
+			fmt.Println("failed to send sms", errsms)
+			return
+		} 
+
 	}
 
 }

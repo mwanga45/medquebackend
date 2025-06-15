@@ -95,7 +95,7 @@ func DaytimeofToday(dayoftoday string, dayname string) {
 func CheckalreadybookedToday(userid string, date string, tx *sql.Tx) (bool, error) {
 	const query = `
         SELECT user_id, start_time, end_time, dayofweek, spec_id 
-        FROM bookingTracking  
+        FROM bookingTrack_tb  
         WHERE booking_date = $1 AND user_id = $2
     `
 
