@@ -85,7 +85,7 @@ func CheckalreadybookedToday(userid string, date string, tx *sql.Tx )(bool,error
 		if errorcheck == sql.ErrNoRows{
 			return !isExist, nil  
 		}
-		return isExist, errorcheck
+		return isExist, fmt.Errorf("something went wrong:%w",errorcheck)
 	}
 	defer row.Close()
 	// check if is exist but  userId is used make are booking to another specgroup
