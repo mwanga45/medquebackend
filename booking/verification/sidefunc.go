@@ -71,39 +71,52 @@ func DaytimeofToday(dayoftoday string,dayname string ){
 // func CheckBookingforWhom(isforMe bool , tx *sql.DB )  {
     
 // }
-func CheckalreadybookedToday(userid string, date string, tx *sql.Tx )(bool,error)  {
-	var (
-		start_time string
-		end_time string
-		user_id int
-		day_of_week int
-		spec_id sql.NullInt64
-	)
-	var isExist bool
-	row,errorcheck :=  tx.Query(`SELECT user_id , start_time, end_time, dayofweek , spec_id WHERE booking_date = $1 AND user_id = $2`,date,userid)
-	if errorcheck != nil{
-		if errorcheck == sql.ErrNoRows{
-			return !isExist, nil  
-		}
-		return isExist, fmt.Errorf("something went wrong:%w",errorcheck)
-	}
-	defer row.Close()
-	// check if is exist but  userId is used make are booking to another specgroup
+func CheckalreadybookedToday(userid string, date string, tx *sql.Tx) (bool, error) {
+    const query = `
+        SELECT user_id, start_time, end_time, dayofweek, spec_id 
+        FROM bookingTracking  
+        WHERE booking_date = $1 AND user_id = $2
+    `
 
-	for row.Next(){
-      if errScan := row.Scan(&user_id, &start_time,&end_time,&day_of_week,spec_id ); errScan != nil{
-         return isExist, fmt.Errorf("something went wrong: %w",errScan)
-	  }
-	  if spec_id.Valid && spec_id.Int64 != 0{
-		return !isExist, nil
-	  }else {
-		return isExist , nil
-	  } 
+    
+    rows, err := tx.Query(query, date, userid)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            
+            return false, nil
+        }
+        
+        return false, fmt.Errorf("database query failed: %w", err)
     }
-	if err := row.Err(); err !=nil{
-      return isExist, fmt.Errorf("something went wrong: %w", err)
-	}
-	return !isExist, nil
+    
+    defer rows.Close()
+
+    hasNormalBooking := false
+    for rows.Next() {
+        var (
+            user_id    int
+            start_time string
+            end_time   string
+            dayofweek  int
+            spec_id    int  
+        )
+
+        
+        if err := rows.Scan(&user_id, &start_time, &end_time, &dayofweek, &spec_id); err != nil {
+            return false, fmt.Errorf("row scan failed: %w", err)
+        }
+
+        
+        if spec_id == 0 {
+            hasNormalBooking = true
+        }
+    }
+
+    
+    if err := rows.Err(); err != nil {
+        return false, fmt.Errorf("rows iteration error: %w", err)
+    }
+    return hasNormalBooking, nil
 }
 
 

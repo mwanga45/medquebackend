@@ -104,9 +104,10 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		log.Printf("Something went wrong: %v", err)
 		return
 	}
-	if !bkreq.ForMe{
+	// if !bkreq.ForMe{
 		
-	}
+
+	// }
 
 
 }
@@ -135,6 +136,8 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	
+	if 
 
 
 	rows, err := tx.Query(`
