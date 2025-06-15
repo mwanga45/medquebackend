@@ -80,6 +80,15 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request)  {
 		})
 		return
 	}
+    var shereq Asdocshedulepayload
+
+	json.NewDecoder(r.Body).Decode(&shereq)
+	var isExist bool
+
+	errcheck := handlerconn.Db.QueryRow(`SELECT 1 FROM doctors WHERE doctor_id = $1`,shereq.DoctorID).Scan(&isExist)
+	if errcheck != nil{
+		
+	}
 
 
 }
