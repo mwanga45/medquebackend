@@ -151,7 +151,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 	} else if !bkreq.ForMe {
 		var hashedsecretkey string
 		var spec_id string
-		errRow := client.QueryRow(`SELECT secretkey FROM Specialgroup WHERE Username = $1 AND manageby_id = $2`, bkreq.Specname, UserId).Scan(&hashedsecretkey,&spec_id)
+		errRow := client.QueryRow(`SELECT secretkey FROM Specialgroup WHERE Username = $1 AND manageby_id = $2`, bkreq.Specname, UserId).Scan(&hashedsecretkey, &spec_id)
 		if errRow != nil {
 			if err == sql.ErrNoRows {
 				fmt.Println("no such special-group entry for user", err)
@@ -177,25 +177,34 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("something went wrong ", errcomparedhash)
 			return
 		}
-		_, errexec := client.Exec(`INSERT INTO bookingTrack_tb (user_id, spec_id , doctor_id, service_id, booking_date, dayofweek, start_time, end_time, status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,UserId,spec_id,bkreq.DoctorID,bkreq.ServiceID,bkreq.Date,bkreq.StartTime,bkreq.EndTime,"completed")
-		if errexec != nil{
+		_, errexec := client.Exec(`INSERT INTO bookingTrack_tb (user_id, spec_id , doctor_id, service_id, booking_date, dayofweek, start_time, end_time, status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, UserId, spec_id, bkreq.DoctorID, bkreq.ServiceID, bkreq.Date, bkreq.StartTime, bkreq.EndTime, "completed")
+		if errexec != nil {
 			json.NewEncoder(w).Encode(Response{
 				Message: "Internal ServerError",
 				Success: false,
 			})
 			fmt.Println("something went wrong failed to execute query", errexec)
 		}
-		errsms := smsendpoint.SmsEndpoint(bkreq.Specname,phone,bkreq.StartTime,bkreq.EndTime)
-		if errsms != nil{
+		errsms := smsendpoint.SmsEndpoint(bkreq.Specname, phone, bkreq.StartTime, bkreq.EndTime)
+		if errsms != nil {
 			json.NewEncoder(w).Encode(Response{
 				Message: "InternetError",
 				Success: false,
 			})
 			fmt.Println("failed to send sms", errsms)
 			return
-		} 
+		}
 
 	}
+	if err := client.Commit(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
+		return
+	}
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfuly make booking",
+		Success: false,
+	})
 
 }
 
