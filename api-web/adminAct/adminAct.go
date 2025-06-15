@@ -7,7 +7,6 @@ import (
 	handlerconn "medquemod/db_conn"
 	"net/http"
 
-	"golang.org/x/tools/go/analysis/checker"
 )
 
 type (
@@ -146,13 +145,28 @@ func AssignDocService(w http.ResponseWriter, r *http.Request){
 	}
 	checker = handlerconn.Db.QueryRow(`SELECT 1 FROM serviceAvailable WHERE serv_id = $1`,asservreq.ServiceID).Scan(&isservExist)
 	if checker != nil{
-				json.NewEncoder(w).Encode(Response{
+			json.NewEncoder(w).Encode(Response{
 			Message: "Internal ServerError",
 			Success: false,
 		})
 		fmt.Println("Failed to check if serv exist",checker)
 		return
-		
+	}
+	if isdocExist || isservExist{
+		json.NewEncoder(w).Encode(Response{
+			Message: "doctoer or service is not exist",
+			Success: false,
+		})
+		return
+	}
+	_,errorExec := handlerconn.Db.Exec(`INSERT INTO doctorServ_tb (doctor_id, service_id) VALUES($1,$2)`,asservreq.DoctorID,asservreq.ServiceID)
+	if errorExec != nil{
+				json.NewEncoder(w).Encode(Response{
+			Message: "Internal ServerError",
+			Success: false,
+		})
+		fmt.Println("something went wrong",checker)
+		return
 	}
 
 }
