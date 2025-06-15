@@ -6,119 +6,135 @@ import (
 	"fmt"
 	"time"
 	"unicode"
+
 )
 
 type (
-	Timeslot struct{
-	StartTime  string
-	EndTime string
-}
-   
-
+	Timeslot struct {
+		StartTime string
+		EndTime   string
+	}
 )
-func GenerateTimeSlote(timeInterval int, startTime string, endTime string)([]Timeslot, error) {
+
+func GenerateTimeSlote(timeInterval int, startTime string, endTime string) ([]Timeslot, error) {
 	layout := "15:04"
 	now := time.Now()
 
-	start, err :=  time.ParseInLocation(layout,startTime,now.Location())
-	if err != nil{
-	
-		return nil , fmt.Errorf("something went wrong: %w", err)
-	}
-   end, err :=  time.ParseInLocation(layout, endTime, now.Location())
-   if err != nil{
-	return nil , fmt.Errorf("something  went wrong: %w ", err)
-   }
-   if end.Before(start){
-	  end = end.Add(24 *time.Hour)
-   }
-   var slot []Timeslot
-   current  :=  start
+	start, err := time.ParseInLocation(layout, startTime, now.Location())
+	if err != nil {
 
-   for {
-	next :=  current.Add(time.Duration(timeInterval) *time.Minute)
-	if current.After(end){
-		break
+		return nil, fmt.Errorf("something went wrong: %w", err)
 	}
-	slot = append(slot, Timeslot{
-		StartTime: current.Format(layout),
-		EndTime: next.Format(layout),
-	})
-	current = next
-   }
-   return  slot , nil
+	end, err := time.ParseInLocation(layout, endTime, now.Location())
+	if err != nil {
+		return nil, fmt.Errorf("something  went wrong: %w ", err)
+	}
+	if end.Before(start) {
+		end = end.Add(24 * time.Hour)
+	}
+	var slot []Timeslot
+	current := start
+
+	for {
+		next := current.Add(time.Duration(timeInterval) * time.Minute)
+		if current.After(end) {
+			break
+		}
+		slot = append(slot, Timeslot{
+			StartTime: current.Format(layout),
+			EndTime:   next.Format(layout),
+		})
+		current = next
+	}
+	return slot, nil
 
 }
-func Dayofweek(day int)(string, error){
-	daysname  :=  []string{
+
+func Dayofweek(day int) (string, error) {
+	daysname := []string{
 		"Sunday",
 		"Monday",
 		"Tuesday",
-		"Wensday",
+		"Wednesday",
 		"Thursday",
 		"Friday",
 		"Saturday",
 	}
-	if day < 0 ||day > 6{
+	if day < 0 || day > 6 {
 		return "", fmt.Errorf("the day value should be   range from 0-6")
 	}
 	return daysname[day], nil
 }
-func DaytimeofToday(dayoftoday string,dayname string ){
+func DayOfWeekReverse(day string) (int, error) {
+    switch day {
+    case "Sunday":
+        return 0, nil
+    case "Monday":
+        return 1, nil
+    case "Tuesday":
+        return 2, nil
+    case "Wednesday":
+        return 3, nil
+    case "Thursday":
+        return 4, nil
+    case "Friday":
+        return 5, nil
+    case "Saturday":
+        return 6, nil
+    default:
+        return -1, fmt.Errorf("invalid weekday: %q", day)
+    }
+}
+func DaytimeofToday(dayoftoday string, dayname string) {
 
 }
 
 // func CheckBookingforWhom(isforMe bool , tx *sql.DB )  {
-    
+
 // }
 func CheckalreadybookedToday(userid string, date string, tx *sql.Tx) (bool, error) {
-    const query = `
+	const query = `
         SELECT user_id, start_time, end_time, dayofweek, spec_id 
         FROM bookingTracking  
         WHERE booking_date = $1 AND user_id = $2
     `
 
-    
-    rows, err := tx.Query(query, date, userid)
-    if err != nil {
-        if err == sql.ErrNoRows {
-            
-            return false, nil
-        }
-        
-        return false, fmt.Errorf("database query failed: %w", err)
-    }
-    
-    defer rows.Close()
+	rows, err := tx.Query(query, date, userid)
+	if err != nil {
+		if err == sql.ErrNoRows {
 
-    hasNormalBooking := false
-    for rows.Next() {
-        var (
-            user_id    int
-            start_time string
-            end_time   string
-            dayofweek  int
-            spec_id    int  
-        )
+			return false, nil
+		}
 
-        
-        if err := rows.Scan(&user_id, &start_time, &end_time, &dayofweek, &spec_id); err != nil {
-            return false, fmt.Errorf("row scan failed: %w", err)
-        }
+		return false, fmt.Errorf("database query failed: %w", err)
+	}
 
-        
-        if spec_id == 0 {
-            hasNormalBooking = true
-        }
-    }
+	defer rows.Close()
 
-    
-    if err := rows.Err(); err != nil {
-        return false, fmt.Errorf("rows iteration error: %w", err)
-    }
-    return hasNormalBooking, nil
+	hasNormalBooking := false
+	for rows.Next() {
+		var (
+			user_id    int
+			start_time string
+			end_time   string
+			dayofweek  int
+			spec_id    int
+		)
+
+		if err := rows.Scan(&user_id, &start_time, &end_time, &dayofweek, &spec_id); err != nil {
+			return false, fmt.Errorf("row scan failed: %w", err)
+		}
+
+		if spec_id == 0 {
+			hasNormalBooking = true
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return false, fmt.Errorf("rows iteration error: %w", err)
+	}
+	return hasNormalBooking, nil
 }
-
 
 func CheckLimit(userID string, client *sql.Tx) (map[int]string, error) {
 	rows, err := client.Query(
@@ -130,10 +146,8 @@ func CheckLimit(userID string, client *sql.Tx) (map[int]string, error) {
 	}
 	defer rows.Close()
 
-	
 	specials := make(map[int]string)
 
-	
 	var count int
 	for rows.Next() {
 		var name string
@@ -156,27 +170,27 @@ func CheckLimit(userID string, client *sql.Tx) (map[int]string, error) {
 	return specials, nil
 }
 
-func ValidateSecretkey(key string)error  {
-	if len(key) < 6{
+func ValidateSecretkey(key string) error {
+	if len(key) < 6 {
 		return errors.New("please secretekey must have atleast 6 character")
-	
+
 	}
 	var hasUppercase, hasNumber bool
-	for _,r := range key{
-		switch{
+	for _, r := range key {
+		switch {
 		case unicode.IsUpper(r):
 			hasUppercase = true
 		case unicode.IsDigit(r):
 			hasNumber = true
 
-		} 
+		}
 	}
-		if !hasUppercase{
+	if !hasUppercase {
 		return errors.New("please make sure your Secretkey having atleast one Uppercase character")
 	}
-	if !hasNumber{
+	if !hasNumber {
 		return errors.New("please make sure your your Secretkey having atleast one digit")
 	}
 	return nil
-	
+
 }

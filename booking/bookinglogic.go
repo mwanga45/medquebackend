@@ -3,14 +3,16 @@ package booking
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 
-	sidefunc "medquemod/booking/verification"
+	sidefunc_test "medquemod/booking/verification"
 	handlerconn "medquemod/db_conn"
 	"medquemod/middleware"
+	"medquemod/smsendpoint"
 )
 
 type (
@@ -42,10 +44,11 @@ type (
 	}
 	BKpayload struct{
 		DoctorID  string `json:"doctorId"`
-		Servicename string `json:"servicename"`
+		ServiceID string `json:"serviceId"`
 		StartTime  string `json:"start_time"`
 		EndTime string `json:"end_time"`
 		Date string `json:"date"`
+		Dayofweek string `jsom:"dayofweek"`
 		ForMe bool `json:"forme"`
 	}
 
@@ -104,9 +107,37 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request)  {
 		log.Printf("Something went wrong: %v", err)
 		return
 	}
-	// if !bkreq.ForMe{
+	daynumber , err := sidefunc_test.DayOfWeekReverse(bkreq.Dayofweek)
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalidpayload",
+			Success: false,
+		})
+		return
+	}
+    if bkreq.ForMe{
+	 _,errbk := client.Exec(`INSERT INTO bookingTrack_tb (user_id, doctor_id, service_id, booking_date,dayofweek,start_time,end_time, status)`,UserId,bkreq.DoctorID,bkreq.ServiceID,bkreq.Date,daynumber,bkreq.StartTime,bkreq.EndTime, "completed") 
+	 if errbk != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal serverError",
+			Success: false,
+		})
+		fmt.Println("something went wrong", errbk)
+		return
+	 }
+	errsms := smsendpoint.SmsEndpoint(Username,phone,bkreq.StartTime,bkreq.EndTime)
+	if errsms != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal ServerError",
+			Success: false,
+		})
+		fmt.Println("Something went wrong", errsms)
+		return
+	}
+	}else if !bkreq.ForMe{
+      
+	}
 
-	// }
 
 
 }
@@ -191,13 +222,13 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		}
 
 		
-		dayName, err := sidefunc.Dayofweek(dayInt)
+		dayName, err := sidefunc_test.Dayofweek(dayInt)
 		if err != nil {
 			continue
 		}
 
 		
-		slots, err := sidefunc.GenerateTimeSlote(durMins, start, end)
+		slots, err := sidefunc_test.GenerateTimeSlote(durMins, start, end)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(Response{Message:"Slot generation error", Success: false})
