@@ -87,8 +87,34 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request)  {
 
 	errcheck := handlerconn.Db.QueryRow(`SELECT 1 FROM doctors WHERE doctor_id = $1`,shereq.DoctorID).Scan(&isExist)
 	if errcheck != nil{
-		
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal serverError",
+			Success: false,
+		})
+		fmt.Println("failed to execute query",errcheck)
 	}
+	if isExist{
+		json.NewEncoder(w).Encode(Response{
+			Message: " Staff(doctor) is not yet exist in the system",
+			Success: false,
+			Data: shereq.DoctorID,
+		})
+		return
+	}
+	_,errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time)`,shereq.DoctorID,shereq.Dayofweek,shereq.StartTime,shereq.EndTime)
+	if errexec != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		return
+	}
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfuly assign new staff shedule",
+		Success: true,
+		Data: shereq.DoctorID,
+	})
 
 
 }
