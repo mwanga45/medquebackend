@@ -22,6 +22,7 @@ type (
 		Firstname string `json:"firstname"`
 		Secondname string `json:"Secondname"`
 		Dial string `json:"dial"`
+		Reason string `json:"reason"`
 	}
 )
 
@@ -53,8 +54,8 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	var phone string 
-	errcheckId := client.QueryRow(`SELECT dial FROM Users WHERE user_id = $1 `,claims.ID).Scan(phone)
+	var Phone string 
+	errcheckId := client.QueryRow(`SELECT dial FROM Users WHERE user_id = $1 `,claims.ID).Scan(&Phone)
 	if errcheckId != nil{
 		if errcheckId == sql.ErrNoRows{
 			json.NewEncoder(w).Encode(Response{
@@ -84,11 +85,24 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal Server Error",
 			Success: false,
+			Data: err,
 		})
 		fmt.Errorf("something went wrong: %w", err)
 		return
 	}
-	
+ 
+	Username := fmt.Sprint(reqpayload.Firstname + " " + reqpayload.Secondname)
+	_, err = client.Exec(`INSERT INTO Specialgroup (Username, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6)`,Username, reqpayload.Age,Phone,reqpayload.Dial,reqpayload.Reason)
+
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Failed to Create new user, Internal ServerERROR",
+			Success: false,
+
+		})
+		
+		return
+	}
 
 
 

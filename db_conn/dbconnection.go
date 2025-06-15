@@ -156,7 +156,7 @@ if _,err = Db.Exec(specialist); err !=nil{
 	managedby_id INTEGER REFERENCES Users(user_id),
 	dialforCreator VARCHAR (20) REFERENCES User(dial),
 	dialforUser VARCHAR (20),
-	Reason TEXT NOT NULL
+	reason TEXT NOT NULL
 	)
 	`;
    if _, err = Db.Exec(Specialgroup); err != nil{
