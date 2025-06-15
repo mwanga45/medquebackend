@@ -2,8 +2,10 @@ package sidefunc_test
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
+	"unicode"
 )
 
 type (
@@ -106,4 +108,29 @@ func CheckLimit(userID string, client *sql.Tx) (map[int]string, error) {
 	}
 
 	return specials, nil
+}
+
+func ValidateSecretkey(key string)error  {
+	if len(key) < 6{
+		return errors.New("please secretekey must have atleast 6 character")
+	
+	}
+	var hasUppercase, hasNumber bool
+	for _,r := range key{
+		switch{
+		case unicode.IsUpper(r):
+			hasUppercase = true
+		case unicode.IsDigit(r):
+			hasNumber = true
+
+		} 
+	}
+		if !hasUppercase{
+		return errors.New("please make sure your Secretkey having atleast one Uppercase character")
+	}
+	if !hasNumber{
+		return errors.New("please make sure your your Secretkey having atleast one digit")
+	}
+	return nil
+	
 }
