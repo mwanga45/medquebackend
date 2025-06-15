@@ -84,6 +84,7 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	var shereq Asdocshedulepayload
 
 	json.NewDecoder(r.Body).Decode(&shereq)
@@ -168,5 +169,10 @@ func AssignDocService(w http.ResponseWriter, r *http.Request){
 		fmt.Println("something went wrong",checker)
 		return
 	}
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfuly assign  doctor service",
+		Success: true,
+		Data: asservreq,
+	})
 
 }
