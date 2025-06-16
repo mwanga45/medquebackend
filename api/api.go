@@ -47,7 +47,6 @@ type (
 	}
 )
 func DoctorsAvailability(w http.ResponseWriter, r *http.Request) {
-
     if r.Method != http.MethodGet {
         w.WriteHeader(http.StatusMethodNotAllowed)
         json.NewEncoder(w).Encode(Response{
