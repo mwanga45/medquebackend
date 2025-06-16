@@ -40,10 +40,10 @@ type (
 	}
 	Service struct {
 		ID                 int     `json:"id"`
-		Disease            string  `json:"disease"`
-		Fullname           string  `json:"fullname"`
-		ServiceDescription string  `json:"serviceDescription"`
+		Servicename           string  `json:"servicename"`
 		ConsultationFee    float64 `json:"consultationFee"`
+		CreatedAt  string `json:"created_at"`
+		DurationMin int `json:"duration_minutes"`
 	}
 )
 func DoctorsAvailability(w http.ResponseWriter, r *http.Request) {
@@ -281,7 +281,7 @@ func GetService(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	rows, err := handlerconn.Db.Query("SELECT * FROM  serviceAvailable")
+	rows, err := handlerconn.Db.Query("SELECT serv_id, servicename, duration_minutes, fee, created_at FROM  serviceAvailable")
 	if err != nil {
 		log.Printf("Database query error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -299,10 +299,10 @@ func GetService(w http.ResponseWriter, r *http.Request) {
 		var service Service
 		err := rows.Scan(
 			&service.ID,
-			&service.Fullname,
-			&service.Disease,
-			&service.ServiceDescription,
+			&service.Servicename,
+            &service.DurationMin,
 			&service.ConsultationFee,
+			&service.CreatedAt,
 		)
 		if err != nil {
 			log.Printf("Row scanning error: %v", err)

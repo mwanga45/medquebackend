@@ -114,6 +114,23 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(serviceAvailable); err != nil {
 		log.Fatalf("Failed to create table serviceAvailable :%v ", err)
 	}
+		Specialgroup := `
+	CREATE TABLE IF NOT EXISTS Specialgroup (
+  spec_id         SERIAL PRIMARY KEY,
+  username        VARCHAR(200),
+  secretkey       VARCHAR(200),
+  age             INTEGER,
+  managedby_id    INTEGER REFERENCES Users(user_id),
+  dialforCreator  VARCHAR(20),
+  dialforUser     VARCHAR(20),
+  reason          TEXT NOT NULL,
+  FOREIGN KEY (dialforCreator) REFERENCES Users(dial),
+  FOREIGN KEY (dialforUser)    REFERENCES Users(dial)
+	)
+	`
+	if _, err = Db.Exec(Specialgroup); err != nil {
+		log.Fatal("Failed to create table specialgroup",err)
+	}
 	bookingtracking := `CREATE TABLE IF NOT EXISTS bookingTrack_tb (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(user_id),
@@ -147,21 +164,7 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(doctorServ_tb); err != nil {
 		log.Fatalf("Failed to create table doctorServ")
 	}
-	Specialgroup := `
-	CREATE TABLE IF NOT EXISTS Specialgroup(
-	spec_id SERIAL PRIMARY KEY,
-	Username  VARCHAR (200),
-	secretkey VARCHAR(200),
-	Age INTERGER ,
-	managedby_id INTEGER REFERENCES Users(user_id),
-	dialforCreator VARCHAR (20) REFERENCES User(dial),
-	dialforUser VARCHAR (20),
-	reason TEXT NOT NULL
-	)
-	`
-	if _, err = Db.Exec(Specialgroup); err != nil {
-		log.Fatal("Failed to create table specialgroup")
-	}
+
 	return nil
 
 }

@@ -7,12 +7,13 @@ import (
 	handlerconn "medquemod/db_conn"
 	"net/http"
 
+	
 )
 
 type (
 	ServAssignpayload struct {
 		Servname    string  `json:"servname"`
-		DurationMin int     `json:"duration_time"`
+		DurationMin int    `json:"duration_time"`
 		Fee         float64 `json:"fee"`
 	}
 
@@ -45,8 +46,8 @@ func AssignService(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var Assreq ServAssignpayload
 	json.NewDecoder(r.Body).Decode(&Assreq)
-	var serv_id string
-	checkifexisterr := handlerconn.Db.QueryRow(`SELECT serv_id,servicename FROM serviceAvailable  WHERE servicename = $1`, Assreq.Servname).Scan(&serv_id)
+	var servname string
+	checkifexisterr := handlerconn.Db.QueryRow(`SELECT servicename FROM serviceAvailable  WHERE servicename = $1`, Assreq.Servname).Scan(&servname)
 	if checkifexisterr != nil {
 		if checkifexisterr == sql.ErrNoRows {
 			_, queryerr := handlerconn.Db.Exec(`INSERT INTO serviceAvailable (servicename,duration_minutes, fee) VALUES($1,$2,$3)`, Assreq.Servname, Assreq.DurationMin, Assreq.Fee)
@@ -70,7 +71,7 @@ func AssignService(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{
 		Message: "Servecename is already exist",
 		Success: false,
-		Data:    serv_id,
+		Data: Assreq.Servname,
 	})
 
 }
