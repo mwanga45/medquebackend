@@ -39,6 +39,12 @@ type (
 		DoctorID string `json:"doctor_id" validate:"required"`
 		Service_id string `json:"serviceid" validate:"required"`
 	}
+	DocVSServLs struct{
+		DoctorID string `json:"doctor_id"`
+		ServiceID string `json:"serv_id"`
+		Servname string  `json:"servname"`
+		Doctorname string `json:"doctorname"`
+	}
 )
 
 func AssignService(w http.ResponseWriter, r *http.Request) {
@@ -337,6 +343,45 @@ func ServVsDoc(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 	w.Header().Set("content-type", "application/json")
-	
+	query := "SELECT S.servicename, S.serv_id, d.doctor_id, d.doctorname FROM serviceAvailable AS S  JOIN doctor_services AS ds ON ds. service_id = S.serv_id JOIN doctors AS d ON d.doctor_id = ds.doctor_id"
+     row,errRow := handlerconn.Db.Query(query)
+	 if errRow != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		fmt.Println("something went wrong",errRow)
+		return
+	 }
+	 defer row.Close()
+	 var List []DocVSServLs
+	 for row.Next(){
+		 var s DocVSServLs
+	errScan := row.Scan(&s.Servname,s.ServiceID,s.DoctorID,s.Doctorname)
+	if errScan  != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal serverError",
+			Success: false,
+		})
+		fmt.Println("something went wrong",errScan)
+		return
+	}
+    List = append(List, s)
+ }
+ if err := row.Err();err != nil{
+	json.NewEncoder(w).Encode(Response{
+		Message: "Something went wrong",
+		Success: false,
+	})
+	fmt.Println("something went wrong", err)
+	return
+ }
+ w.WriteHeader(http.StatusOK)
+ json.NewEncoder(w).Encode(Response{
+	Message: "successfuly",
+	Success: true,
+	Data: List,
+ })
 	
 }

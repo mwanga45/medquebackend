@@ -143,8 +143,8 @@ func Connectionpool(databasesourceName string) error {
         end_time TIME NOT NULL,
         status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(doctor_id, booking_date, start_time)
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        
       )
     `
 
