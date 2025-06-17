@@ -157,8 +157,7 @@ func Connectionpool(databasesourceName string) error {
         id SERIAL PRIMARY KEY,
         doctor_id INTEGER REFERENCES doctors(doctor_id),
         service_id INTEGER REFERENCES serviceAvailable(serv_id),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(doctor_id, service_id)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
 	if _, err = Db.Exec(doctorServ_tb); err != nil {

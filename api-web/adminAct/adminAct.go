@@ -302,6 +302,29 @@ func DocServAssign (w http.ResponseWriter, r * http.Request){
 	var reqAsgn DocServPayload
 
 	json.NewDecoder(r.Body).Decode(&reqAsgn)
-	
+	query := "SELECT EXISTS(SELECT 1 FROM doctor_services WHERE doctor_id = $1 AND service_id = $2 )"
+    var isExist bool 
+	errcheck := handlerconn.Db.QueryRow(query,reqAsgn.DoctorID,reqAsgn.Service_id).Scan(&isExist)
+	if errcheck != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "payload is Already exists",
+			Success: false,
+		})
+		return
+	}
+	_,execErr := handlerconn.Db.Exec(`INSERT INTO doctor_services (doctor_id, service_id) VALUES($1,$2) `,reqAsgn.DoctorID,reqAsgn.Service_id)
+	if execErr != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		fmt.Println("something went wrong",execErr)
+		return
+	}
 
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfuly assign doctor to service of id",
+		Success: true,
+		Data:reqAsgn.Service_id,
+	})
 }

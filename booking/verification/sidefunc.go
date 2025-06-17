@@ -193,30 +193,6 @@ func ValidateSecretkey(key string) error {
 
 }
 
-// func Check_Identification(username string, regNo string, password string, phone_number string, email string, home_address string) error {
-// 	check_reg := regNo[:7]
-// 	// hashpassword
-// 	hashpassword, err := bcrypt.GenerateFromPassword([]byte(password),bcrypt.DefaultCost)
-// 	if err != nil{
-// 		return fmt.Errorf("something went wrong")
-// 	}
-// 	fmt.Println(hashpassword)
-
-
-// 	switch check_reg {
-// 	case "MHD/DKT":
-// 		return handleREGprocess("Dkt_tb",username,regNo,hashpassword,phone_number,email,home_address)
-// 	case "MHD/ADM":
-		
-// 		return handleREGprocess("Admin_tb",username,regNo,hashpassword,phone_number,email,home_address)
-// 	case "MHD/NRS":
-		
-// 		return handleREGprocess("Nrs_tb",username,regNo,hashpassword,phone_number,email,home_address)
-// 	default:
-// 		return fmt.Errorf("something went wrong here",)
-// 	}
-
-// }
 func HandleREGprocess(table string,username string, regNo string,password []byte, phone_number string, email string, home_address string, tx *sql.Tx)error{
 	var exist bool
 	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE regNo = $1)",table)
@@ -248,3 +224,14 @@ func Checkpassword(pwrd , cpwrd string)(bool){
 	return false
    }
 }
+// func CheckForRowValue(client *sql.DB,checkedValue2 string, query string)(bool,error){
+// 	var isExist bool
+// 	errChecked := client.QueryRow(query).Scan(isExist)
+// 	if errChecked != nil{
+// 		return false, fmt.Errorf("failde to exicute query:%w",errChecked)
+// 	}
+// 	if !isExist{
+// 		return false,fmt.Errorf("the value is not exist ")
+// 	}
+// 	return true, nil
+// }
