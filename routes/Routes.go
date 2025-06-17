@@ -31,8 +31,6 @@ func HandleRoutes(r *mux.Router) {
 	Adm := r.PathPrefix("/adim").Subrouter()
 	Adm.HandleFunc("/registerserv",adminact.AssignService ).Methods("POST")
 	Adm.HandleFunc("/docshedule", adminact.Asdocshedule).Methods("POST")
-	
-
-	
-
+	Adm.HandleFunc("/regspecilist",adminact.RegSpecialist).Methods("POST")
+	Adm.HandleFunc("/getspecInfo",adminact.ReturnSpec).Methods("GET")
 }
