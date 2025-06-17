@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 	"unicode"
-
 	// "golang.org/x/crypto/bcrypt"
 )
 
@@ -234,4 +234,12 @@ func HandleREGprocess(table string,username string, regNo string,password []byte
 	return fmt.Errorf("something went wwrong here")
    }
   return nil
+}
+
+func CheckIdentifiaction(RegNo string)(bool)  {
+    if strings.HasPrefix(RegNo,"MHD/DKT"){
+		return true
+	}else{
+		return false
+	}
 }
