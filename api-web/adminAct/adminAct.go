@@ -298,7 +298,6 @@ func DocServAssign (w http.ResponseWriter, r * http.Request){
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	
 	var reqAsgn DocServPayload
 
 	json.NewDecoder(r.Body).Decode(&reqAsgn)
@@ -327,4 +326,17 @@ func DocServAssign (w http.ResponseWriter, r * http.Request){
 		Success: true,
 		Data:reqAsgn.Service_id,
 	})
+}
+func ServVsDoc(w http.ResponseWriter, r *http.Request)  {
+	if r.Method != http.MethodGet{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "badRequest",
+			Success: false,
+		})
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	
+	
 }
