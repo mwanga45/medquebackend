@@ -60,7 +60,8 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Something went wrong", errTx)
 		return
 	}
-	errCheck := client.QueryRow(`SELECT EXIST(SELECT 1 FROM doctors WHERE email = $1 AND  doctorname = $2 )`, stafreg.Email, stafreg.Doctorname).Scan(&isExist)
+	defer client.Rollback()
+	errCheck := client.QueryRow(`SELECT EXISTS(SELECT 1 FROM doctors WHERE email = $1 AND  doctorname = $2 )`, stafreg.Email, stafreg.Doctorname).Scan(&isExist)
 	if errCheck != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
@@ -71,7 +72,7 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var isSpec bool
-	errspec := client.QueryRow(`SELECT EXIST(SELECT 1 FROM specialist WHERE specialist  = $1)`, stafreg.Specialist).Scan(&isSpec)
+	errspec := client.QueryRow(`SELECT EXISTS(SELECT 1 FROM specialist WHERE specialist  = $1)`, stafreg.Specialist).Scan(&isSpec)
 	if errspec != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
@@ -98,7 +99,7 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		log.Println("something went  wrong", err)
 		return
 	 }
-	_,errEXec := client.Exec(`INSERT INTO doctors (doctorname, password, email, specialist_name,phone, identification, role) `, stafreg.Doctorname, hashedpwrd,stafreg.Email,stafreg.Specialist,stafreg.Phone,stafreg.RegNo,"dkt")
+	_,errEXec := client.Exec(`INSERT INTO doctors (doctorname, password, email, specialist_name,phone, identification, role) VALUES($1,$2,$3,$4,$5,$6,$7) `, stafreg.Doctorname, hashedpwrd,stafreg.Email,stafreg.Specialist,stafreg.Phone,stafreg.RegNo,"dkt")
 	if errEXec != nil{
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
@@ -108,5 +109,19 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		log.Println("something went wrong", errEXec)
 		return
 	}
+	
+	if errCommit := client.Commit(); errCommit != nil{
+	     json.NewEncoder(w).Encode(Response{
+			Message: "System failed to commit request try Again",
+			Success: false,
+		 })
+		 return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(Response{
+		Message: "successfuly registered",
+		Success: true,
+	})
+
 
 }
