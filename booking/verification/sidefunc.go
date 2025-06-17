@@ -243,3 +243,10 @@ func CheckIdentifiaction(RegNo string)(bool)  {
 		return false
 	}
 }
+func Checkpassword(pwrd , cpwrd string)(bool){
+   if pwrd == cpwrd {
+	return true
+   }else{
+	return false
+   }
+}

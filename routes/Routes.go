@@ -3,6 +3,7 @@ package Routesf_test
 import (
 	"medquemod/api"
 	adminact "medquemod/api-web/adminAct"
+	docact "medquemod/api-web/docAct"
 	"medquemod/booking"
 	handler_chat "medquemod/chatbot"
 	authentic "medquemod/handleauthentic"
@@ -33,4 +34,9 @@ func HandleRoutes(r *mux.Router) {
 	Adm.HandleFunc("/docshedule", adminact.Asdocshedule).Methods("POST")
 	Adm.HandleFunc("/regspecilist",adminact.RegSpecialist).Methods("POST")
 	Adm.HandleFunc("/getspecInfo",adminact.ReturnSpec).Methods("GET")
+
+	// ROUTES FOR THE DOCTOR
+	dkt := r.PathPrefix("/dkt").Subrouter()
+	dkt.HandleFunc("/register",docact.Registration).Methods("POST")
+
 }

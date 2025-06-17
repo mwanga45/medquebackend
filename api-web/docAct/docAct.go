@@ -21,9 +21,11 @@ type (
 		Doctorname string `json:"username" validate:"required"`
 		RegNo      string `json:"regNo" validate:"required"`
 		Password   string `json:"password" validate:"required"`
+		Confirmpwrd string `json:"confirmpwrd" validate:"required"`
 		Specialist string `json:"specialist" validate:"required"`
 		Phone      string `json:"phone" validate:"required"`
 		Email      string `json:"email" validate:"required"`
+
 	}
 )
 
@@ -36,6 +38,7 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	w.Header().Set("Content-Type","application/json")
 	var stafreg StaffRegister
 	json.NewDecoder(r.Body).Decode(&stafreg)
 
@@ -45,6 +48,15 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalid Payload ",
+			Success: false,
+		})
+		return
+	}
+	isSame := sidefunc_test.Checkpassword(stafreg.Password, stafreg.Confirmpwrd)
+	if !isSame{
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Confirm password and password are not the same",
 			Success: false,
 		})
 		return
@@ -122,6 +134,4 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		Message: "successfuly registered",
 		Success: true,
 	})
-
-
 }
