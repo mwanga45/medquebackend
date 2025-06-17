@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	// sidefunc_test "medquemod/booking/verification"
 	handlerconn "medquemod/db_conn"
 	"net/http"
 )
@@ -21,10 +22,10 @@ type (
 		Data    interface{} `json:"data,omitempty"`
 	}
 	Asdocshedulepayload struct {
-		DoctorID  int    `json:"docId"`
-		Dayofweek int    `json:"dow"`
-		StartTime string `json:"start_time"`
-		EndTime   string `json:"end_time"`
+		DoctorID  string    `json:"doctor_id" validate:"required"`
+		Dayofweek string   `json:"day_of_week" validate:"required"`
+		StartTime string `json:"start_time" validate:"required"`
+		EndTime   string `json:"end_time" validate:"required"`
 	}
 	AsdocServ struct {
 		DoctorID  string `json:"docID"`
@@ -33,6 +34,10 @@ type (
 	SpecialistPayload struct {
 		Specialist  string `json:"specialist"`
 		Description string `json:"description"`
+	}
+	DocServPayload struct{
+		DoctorID string `json:"doctor_id" validate:"required"`
+		Service_id string `json:"serviceid" validate:"required"`
 	}
 )
 
@@ -93,7 +98,7 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&shereq)
 	var isExist bool
 
-	errcheck := handlerconn.Db.QueryRow(`SELECT 1 FROM doctors WHERE doctor_id = $1`, shereq.DoctorID).Scan(&isExist)
+	errcheck := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM doctors WHERE doctor_id = $1)`, shereq.DoctorID).Scan(&isExist)
 	if errcheck != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal serverError",
@@ -101,7 +106,7 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request) {
 		})
 		fmt.Println("failed to execute query", errcheck)
 	}
-	if isExist {
+	if !isExist {
 		json.NewEncoder(w).Encode(Response{
 			Message: " Staff(doctor) is not yet exist in the system",
 			Success: false,
@@ -109,13 +114,23 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	_, errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time)`, shereq.DoctorID, shereq.Dayofweek, shereq.StartTime, shereq.EndTime)
+	// dayNumber, err := sidefunc_test.DayOfWeekReverse(shereq.Dayofweek)
+	// if err != nil{
+	// 	json.NewEncoder(w).Encode(Response{
+	// 		Message: "Invalid payload",
+	// 		Success: false,
+	// 	})
+	// 	fmt.Println("Something went wrong",err)
+	// 	return
+	// }
+	_, errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time) VALUES($1,$2,$3,$4)`, shereq.DoctorID, shereq.Dayofweek, shereq.StartTime, shereq.EndTime)
 	if errexec != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Something went wrong",
 			Success: false,
 		})
+		fmt.Println("something went wrong", errexec)
 		return
 	}
 	json.NewEncoder(w).Encode(Response{
@@ -147,6 +162,7 @@ func AssignDocService(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Failed to check if doc exist", checker)
 		return
 	}
+
 	checker = handlerconn.Db.QueryRow(`SELECT 1 FROM serviceAvailable WHERE serv_id = $1`, asservreq.ServiceID).Scan(&isservExist)
 	if checker != nil {
 		json.NewEncoder(w).Encode(Response{
@@ -198,6 +214,7 @@ func RegSpecialist(w http.ResponseWriter, r *http.Request) {
 	queryCheck := handlerconn.Db.QueryRow(`SELECT specialist FROM specialist WHERE specialist = $1 `, specpayload.Specialist).Scan(&specialist)
 	if queryCheck != nil {
 		if queryCheck == sql.ErrNoRows {
+
 			_, err := handlerconn.Db.Exec(`INSERT INTO specialist (specialist, description) VALUES($1,$2)`, specpayload.Specialist, specpayload.Description)
 			if err != nil {
 				json.NewEncoder(w).Encode(Response{
@@ -269,4 +286,22 @@ func ReturnSpec(w http.ResponseWriter, r *http.Request) {
 			Success: true,
 			Data: specialists,
 		})
+}
+
+func DocServAssign (w http.ResponseWriter, r * http.Request){
+	if r.Method != http.MethodPost{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Bad request",
+			Success: false,
+		})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	
+	var reqAsgn DocServPayload
+
+	json.NewDecoder(r.Body).Decode(&reqAsgn)
+	
+
 }

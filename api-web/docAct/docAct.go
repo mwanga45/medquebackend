@@ -101,6 +101,14 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	errpaswrd := sidefunc_test.ValidateSecretkey(stafreg.Password)
+	if errpaswrd != nil{
+		json.NewEncoder(w).Encode(Response{
+			Message: "password must have 6 character and atleast having one Uppercase and digit ",
+			Success: false,
+		})
+		return
+	}
 	hashedpwrd, err := bcrypt.GenerateFromPassword([]byte(stafreg.Password),bcrypt.DefaultCost)
 	 if err != nil{
 		w.WriteHeader(http.StatusInternalServerError)

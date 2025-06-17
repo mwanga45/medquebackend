@@ -90,9 +90,7 @@ func DaytimeofToday(dayoftoday string, dayname string) {
 
 }
 
-// func CheckBookingforWhom(isforMe bool , tx *sql.DB )  {
 
-// }
 func CheckalreadybookedToday(userid string, date string, tx *sql.Tx) (bool, error) {
 	const query = `
         SELECT user_id, start_time, end_time, dayofweek, spec_id 
@@ -183,7 +181,7 @@ func ValidateSecretkey(key string) error {
 		case unicode.IsDigit(r):
 			hasNumber = true
 
-		}
+		}   
 	}
 	if !hasUppercase {
 		return errors.New("please make sure your Secretkey having atleast one Uppercase character")
