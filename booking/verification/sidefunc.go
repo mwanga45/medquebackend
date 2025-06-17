@@ -7,6 +7,7 @@ import (
 	"time"
 	"unicode"
 
+	// "golang.org/x/crypto/bcrypt"
 )
 
 type (
@@ -192,4 +193,45 @@ func ValidateSecretkey(key string) error {
 	}
 	return nil
 
+}
+
+// func Check_Identification(username string, regNo string, password string, phone_number string, email string, home_address string) error {
+// 	check_reg := regNo[:7]
+// 	// hashpassword
+// 	hashpassword, err := bcrypt.GenerateFromPassword([]byte(password),bcrypt.DefaultCost)
+// 	if err != nil{
+// 		return fmt.Errorf("something went wrong")
+// 	}
+// 	fmt.Println(hashpassword)
+
+
+// 	switch check_reg {
+// 	case "MHD/DKT":
+// 		return handleREGprocess("Dkt_tb",username,regNo,hashpassword,phone_number,email,home_address)
+// 	case "MHD/ADM":
+		
+// 		return handleREGprocess("Admin_tb",username,regNo,hashpassword,phone_number,email,home_address)
+// 	case "MHD/NRS":
+		
+// 		return handleREGprocess("Nrs_tb",username,regNo,hashpassword,phone_number,email,home_address)
+// 	default:
+// 		return fmt.Errorf("something went wrong here",)
+// 	}
+
+// }
+func HandleREGprocess(table string,username string, regNo string,password []byte, phone_number string, email string, home_address string, tx *sql.Tx)error{
+	var exist bool
+	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE regNo = $1)",table)
+	errExist :=tx.QueryRow(query,regNo).Scan(&exist)
+	if errExist != nil {
+		return fmt.Errorf("something went wrong")
+	}
+	if exist{
+		return fmt.Errorf("staff is already registered with this registration number")
+	}
+   _, errExec := tx.Exec(fmt.Sprintf("INSERT INTO %s (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)",table),username,regNo,password,phone_number,email,home_address)
+   if errExec !=nil {
+	return fmt.Errorf("something went wwrong here")
+   }
+  return nil
 }

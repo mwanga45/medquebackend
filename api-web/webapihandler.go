@@ -14,9 +14,10 @@ import (
 // create structure for the login
 type (
 	StaffRegister struct {
-		Username     string `json:"username" validate:"required"`
+		Doctorname     string `json:"username" validate:"required"`
 		RegNo        string `json:"regNo" validate:"required"`
 		Password     string `json:"password" validate:"required"`
+		Specialist   string `json:"specialist" validate:"required"`
 		Phone        string `json:"phone" validate:"required"`
 		Email        string `json:"email" validate:"required"`
 		Home_address string `json:"home_address" validate:"required"`
@@ -50,7 +51,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	// create an instance for the  StaffLogin struct
+
 	var SL StaffLogin
 	if err := json.NewDecoder(r.Body).Decode(&SL); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -192,7 +193,7 @@ func HandleRegisterUser(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if errAssign := Check_Identification(SR.Username, SR.RegNo, SR.Password, SR.Phone, SR.Email, SR.Home_address); errAssign != nil {
+	if errAssign := Check_Identification(SR.Doctorname, SR.RegNo, SR.Password, SR.Phone, SR.Email, SR.Home_address); errAssign != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Respond{
 			Success: false,
@@ -220,7 +221,7 @@ func Staffexist(regNo string) error {
 	if err := tx.QueryRow(query, regNo).Scan(&exist);err !=nil{
 		return fmt.Errorf("something went wrong")
 	}
-	if !exist {
+	if exist {
 		return fmt.Errorf("staff not yet exist in system")
 	}
 	tx.Commit()

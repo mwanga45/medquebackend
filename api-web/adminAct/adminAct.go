@@ -232,7 +232,6 @@ func ReturnSpec(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	// var spec SpecialistPayload
 	row, errfetch := handlerconn.Db.Query(`SELECT * FROM specialist `)
 	if errfetch != nil {
 		json.NewEncoder(w).Encode(Response{
