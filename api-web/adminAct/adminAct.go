@@ -10,6 +10,21 @@ import (
 )
 
 type (
+	DoctorInfo struct {
+		DoctorID   int    `json:"doctor_id"`
+		Doctorname string `json:"doctorname"`
+	}
+
+	ServiceInfo struct {
+		ServiceID int    `json:"serv_id"`
+		Servname  string `json:"servicename"`
+	}
+
+	CombinedResponse struct {
+		Doctors  []DoctorInfo  `json:"doctors"`
+		Services []ServiceInfo `json:"services"`
+	}
+
 	ServAssignpayload struct {
 		Servname    string  `json:"servname"`
 		DurationMin int     `json:"duration_time"`
@@ -22,8 +37,8 @@ type (
 		Data    interface{} `json:"data,omitempty"`
 	}
 	Asdocshedulepayload struct {
-		DoctorID  string    `json:"doctor_id" validate:"required"`
-		Dayofweek string   `json:"day_of_week" validate:"required"`
+		DoctorID  string `json:"doctor_id" validate:"required"`
+		Dayofweek string `json:"day_of_week" validate:"required"`
 		StartTime string `json:"start_time" validate:"required"`
 		EndTime   string `json:"end_time" validate:"required"`
 	}
@@ -35,14 +50,14 @@ type (
 		Specialist  string `json:"specialist"`
 		Description string `json:"description"`
 	}
-	DocServPayload struct{
-		DoctorID string `json:"doctor_id" validate:"required"`
+	DocServPayload struct {
+		DoctorID   string `json:"doctor_id" validate:"required"`
 		Service_id string `json:"serviceid" validate:"required"`
 	}
-	DocVSServLs struct{
-		DoctorID string `json:"doctor_id"`
-		ServiceID string `json:"serv_id"`
-		Servname string  `json:"servname"`
+	DocVSServLs struct {
+		DoctorID   string `json:"doctor_id"`
+		ServiceID  string `json:"serv_id"`
+		Servname   string `json:"servname"`
 		Doctorname string `json:"doctorname"`
 	}
 )
@@ -120,15 +135,6 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	// dayNumber, err := sidefunc_test.DayOfWeekReverse(shereq.Dayofweek)
-	// if err != nil{
-	// 	json.NewEncoder(w).Encode(Response{
-	// 		Message: "Invalid payload",
-	// 		Success: false,
-	// 	})
-	// 	fmt.Println("Something went wrong",err)
-	// 	return
-	// }
 	_, errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time) VALUES($1,$2,$3,$4)`, shereq.DoctorID, shereq.Dayofweek, shereq.StartTime, shereq.EndTime)
 	if errexec != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -264,38 +270,38 @@ func ReturnSpec(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Something went wrong ", errfetch)
 	}
 	defer row.Close()
-	    var specialists []SpecialistPayload
-		for row.Next() {
-          var s SpecialistPayload
-			errscan := row.Scan(&s.Specialist,&s.Description)
-			if errscan != nil {
-				json.NewEncoder(w).Encode(Response{
-					Message: "Internal error",
-					Success: false,
-				})
-				fmt.Println("Something went wrong here", errscan)
-			}
-		
-			specialists = append(specialists,s)
-		}
-		if err := row.Err(); err != nil{
+	var specialists []SpecialistPayload
+	for row.Next() {
+		var s SpecialistPayload
+		errscan := row.Scan(&s.Specialist, &s.Description)
+		if errscan != nil {
 			json.NewEncoder(w).Encode(Response{
-				Message: "Internal serverError",
+				Message: "Internal error",
 				Success: false,
 			})
-			fmt.Println("Something went wrong",err)
-			return
+			fmt.Println("Something went wrong here", errscan)
 		}
-		
+
+		specialists = append(specialists, s)
+	}
+	if err := row.Err(); err != nil {
 		json.NewEncoder(w).Encode(Response{
-			Message: "Successfuly",
-			Success: true,
-			Data: specialists,
+			Message: "Internal serverError",
+			Success: false,
 		})
+		fmt.Println("Something went wrong", err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfuly",
+		Success: true,
+		Data:    specialists,
+	})
 }
 
-func DocServAssign (w http.ResponseWriter, r * http.Request){
-	if r.Method != http.MethodPost{
+func DocServAssign(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Bad request",
@@ -308,80 +314,90 @@ func DocServAssign (w http.ResponseWriter, r * http.Request){
 
 	json.NewDecoder(r.Body).Decode(&reqAsgn)
 	query := "SELECT EXISTS(SELECT 1 FROM doctor_services WHERE doctor_id = $1 AND service_id = $2 )"
-    var isExist bool 
-	errcheck := handlerconn.Db.QueryRow(query,reqAsgn.DoctorID,reqAsgn.Service_id).Scan(&isExist)
-	if errcheck != nil{
+	var isExist bool
+	errcheck := handlerconn.Db.QueryRow(query, reqAsgn.DoctorID, reqAsgn.Service_id).Scan(&isExist)
+	if errcheck != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "payload is Already exists",
 			Success: false,
 		})
 		return
 	}
-	_,execErr := handlerconn.Db.Exec(`INSERT INTO doctor_services (doctor_id, service_id) VALUES($1,$2) `,reqAsgn.DoctorID,reqAsgn.Service_id)
-	if execErr != nil{
+	_, execErr := handlerconn.Db.Exec(`INSERT INTO doctor_services (doctor_id, service_id) VALUES($1,$2) `, reqAsgn.DoctorID, reqAsgn.Service_id)
+	if execErr != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Something went wrong",
 			Success: false,
 		})
-		fmt.Println("something went wrong",execErr)
+		fmt.Println("something went wrong", execErr)
 		return
 	}
 
 	json.NewEncoder(w).Encode(Response{
 		Message: "Successfuly assign doctor to service of id",
 		Success: true,
-		Data:reqAsgn.Service_id,
+		Data:    reqAsgn.Service_id,
 	})
 }
-func DocVsServ(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodGet{
+func DocVsServ(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
-			Message: "badRequest",
+			Message: "Only GET is allowed",
 			Success: false,
 		})
 		return
 	}
-	w.Header().Set("content-type", "application/json")
-	query := "SELECT S.servicename, S.serv_id, d.doctor_id, d.doctorname FROM serviceAvailable AS S  JOIN doctor_services AS ds ON ds. service_id = S.serv_id JOIN doctors AS d ON d.doctor_id = ds.doctor_id"
-     row,errRow := handlerconn.Db.Query(query)
-	 if errRow != nil{
+
+	w.Header().Set("Content-Type", "application/json")
+
+
+	doctorRows, err := handlerconn.Db.Query(`SELECT doctor_id, doctorname FROM doctors`)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{
-			Message: "Something went wrong",
-			Success: false,
-		})
-		fmt.Println("something went wrong",errRow)
-		return
-	 }
-	 defer row.Close()
-	 var List []DocVSServLs
-	 for row.Next(){
-		 var s DocVSServLs
-	errScan := row.Scan(&s.Servname,s.ServiceID,s.DoctorID,s.Doctorname)
-	if errScan  != nil {
-		json.NewEncoder(w).Encode(Response{
-			Message: "Internal serverError",
-			Success: false,
-		})
-		fmt.Println("something went wrong",errScan)
+		json.NewEncoder(w).Encode(Response{Message: "Error fetching doctors", Success: false})
 		return
 	}
-    List = append(List, s)
- }
- if err := row.Err();err != nil{
+	defer doctorRows.Close()
+
+	var doctors []DoctorInfo
+	for doctorRows.Next() {
+		var d DoctorInfo
+		if err := doctorRows.Scan(&d.DoctorID, &d.Doctorname); err != nil {
+			json.NewEncoder(w).Encode(Response{Message: "Error scanning doctor", Success: false})
+			return
+		}
+		doctors = append(doctors, d)
+	}
+
+	serviceRows, err := handlerconn.Db.Query(`SELECT serv_id, servicename FROM serviceAvailable`)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Message: "Error fetching services", Success: false})
+		return
+	}
+	defer serviceRows.Close()
+
+	var services []ServiceInfo
+	for serviceRows.Next() {
+		var s ServiceInfo
+		if err := serviceRows.Scan(&s.ServiceID, &s.Servname); err != nil {
+			json.NewEncoder(w).Encode(Response{Message: "Error scanning service", Success: false})
+			return
+		}
+		services = append(services, s)
+	}
+
+
+	finalResponse := CombinedResponse{
+		Doctors:  doctors,
+		Services: services,
+	}
+
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
-		Message: "Something went wrong",
-		Success: false,
+		Message: "Success",
+		Success: true,
+		Data:    finalResponse,
 	})
-	fmt.Println("something went wrong", err)
-	return
- }
- w.WriteHeader(http.StatusOK)
- json.NewEncoder(w).Encode(Response{
-	Message: "successfuly",
-	Success: true,
-	Data: List,
- })
-	
 }
