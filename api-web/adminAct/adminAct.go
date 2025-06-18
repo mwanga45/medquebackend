@@ -333,7 +333,7 @@ func DocServAssign (w http.ResponseWriter, r * http.Request){
 		Data:reqAsgn.Service_id,
 	})
 }
-func ServVsDoc(w http.ResponseWriter, r *http.Request)  {
+func DocVsServ(w http.ResponseWriter, r *http.Request)  {
 	if r.Method != http.MethodGet{
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
