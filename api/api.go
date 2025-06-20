@@ -61,7 +61,7 @@ func DoctorsAvailability(w http.ResponseWriter, r *http.Request) {
     query := `
         SELECT d.doctorname, d.specialist_name, ds.start_time, ds.end_time, ds.day_of_week
         FROM doctors AS d
-        JOIN doctorschedule AS ds
+        JOIN doctorshedule  AS ds
           ON ds.doctor_id = d.doctor_id
     `
 
@@ -103,21 +103,23 @@ func DoctorsAvailability(w http.ResponseWriter, r *http.Request) {
         }
 
         
-        layout := "03:04 PM"
-        startTime, err1 := time.ParseInLocation(layout, startStr, now.Location())
-        endTime, err2 := time.ParseInLocation(layout, endStr, now.Location())
+        layout := "2006-01-02T15:04:05Z"
+        sT, err1 := time.ParseInLocation(layout, startStr, now.Location())
+        eT, err2 := time.ParseInLocation(layout, endStr, now.Location())
         if err1 != nil || err2 != nil {
             log.Printf("time parse error: %v / %v", err1, err2)
             continue
         }
-
+		layout_T := "03:04 PM"
+        startTime := sT.Format(layout_T)
+        endTime := eT.Format(layout_T)
         
-        isAvail := !now.Before(startTime) && !now.After(endTime)
+        isAvail := !now.Before(sT) && !now.After(eT)
         doctors = append(doctors, doctorInfo{
             Fullname:    name,
             Specialist:  spec,
-            StartTime:   startStr,
-            EndTime:     endStr,
+            StartTime:   startTime,
+            EndTime:     endTime,
             Dayofweek:   weekday,
             IsAvailable: isAvail,
         })

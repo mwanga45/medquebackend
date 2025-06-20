@@ -323,14 +323,22 @@ func DocServAssign(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	_, execErr := handlerconn.Db.Exec(`INSERT INTO doctor_services (doctor_id, service_id) VALUES($1,$2) `, reqAsgn.DoctorID, reqAsgn.Service_id)
-	if execErr != nil {
+	if isExist {
 		json.NewEncoder(w).Encode(Response{
-			Message: "Something went wrong",
+			Message: "Request is Already exist in table",
 			Success: false,
 		})
-		fmt.Println("something went wrong", execErr)
 		return
+	}else{
+		_, execErr := handlerconn.Db.Exec(`INSERT INTO doctor_services (doctor_id, service_id) VALUES($1,$2) `, reqAsgn.DoctorID, reqAsgn.Service_id)
+		if execErr != nil {
+			json.NewEncoder(w).Encode(Response{
+				Message: "Something went wrong",
+				Success: false,
+			})
+			fmt.Println("something went wrong", execErr)
+			return
+		}
 	}
 
 	json.NewEncoder(w).Encode(Response{
@@ -350,7 +358,6 @@ func DocVsServ(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
 
 	doctorRows, err := handlerconn.Db.Query(`SELECT doctor_id, doctorname FROM doctors`)
 	if err != nil {
