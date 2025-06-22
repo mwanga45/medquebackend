@@ -359,7 +359,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-     fmt.Println(len(results))
+     fmt.Println(results)
 	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
