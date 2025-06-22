@@ -1,12 +1,12 @@
 package booking
 
 import (
+
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	sidefunc_test "medquemod/booking/verification"
@@ -19,8 +19,8 @@ import (
 
 type (
 	Bkservrequest struct {
-		ServId       string `json:"servid"      validate:"required"`
-		IntervalTime string `json:"timeInter"   validate:"required"`
+		ServId       int `json:"servid"      validate:"required"`
+		IntervalTime int `json:"timeInter"   validate:"required"`
 		Servicename  string `json:"servicename" validate:"required"`
 	}
 
@@ -207,9 +207,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
-
 func Bookinglogic(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{Message: "Invalid method", Success: false})
@@ -231,6 +229,8 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+
+	// Fetch all schedule rows first
 	rows, err := tx.Query(`
 		SELECT 
 		  dk.doctor_id,
@@ -240,22 +240,51 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		  ds.end_time,
 		  sa.duration_minutes,
 		  sa.fee
-		FROM doctors AS dk
-		JOIN doctor_services AS ds ON dk.doctor_id = ds.doctor_id
-		JOIN serviceAvailable AS sa ON ds.service_id = sa.serv_id
-		WHERE sa.servicename = $1
-	`, req.Servicename)
+		FROM serviceAvailable AS sa
+		JOIN doctor_services AS dsv ON sa.serv_id = dsv.service_id
+		JOIN doctors AS dk ON dk.doctor_id = dsv.doctor_id 
+		JOIN doctorshedule AS ds ON ds.doctor_id = dk.doctor_id
+		WHERE sa.serv_id = $1
+	`, req.ServId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Database query error", Success: false})
 		return
 	}
-	defer rows.Close()
+
+	// Store schedules in memory and close rows immediately
+	type schedule struct {
+		docID    int
+		docName  string
+		dayInt   int
+		start    string
+		end      string
+		durMins  int
+		fee      float64
+	}
+	var schedules []schedule
+	for rows.Next() {
+		var s schedule
+		if err := rows.Scan(&s.docID, &s.docName, &s.dayInt, &s.start, &s.end, &s.durMins, &s.fee); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(Response{Message: "Scan error", Success: false})
+			rows.Close()
+			return
+		}
+		schedules = append(schedules, s)
+	}
+	if err := rows.Err(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Message: "Rows error", Success: false})
+		rows.Close()
+		return
+	}
+	rows.Close() // Free transaction for reuse
 
 	now := time.Now()
 	allowedDates := make(map[int]string, 4)
 	for i := 0; i < 4; i++ {
-		d := now.Add(time.Duration(i) * 24 * time.Hour)
+		d := now.AddDate(0, 0, i)
 		allowedDates[int(d.Weekday())] = d.Format("2006-01-02")
 	}
 	todayInt := int(now.Weekday())
@@ -263,32 +292,27 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	var results []bkservrespond
 
-	for rows.Next() {
-		var (
-			docID      int
-			docName    string
-			dayInt     int
-			start, end string
-			durMins    int
-			fee        float64
-		)
-		if err := rows.Scan(&docID, &docName, &dayInt, &start, &end, &durMins, &fee); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(Response{Message: "Scan error", Success: false})
-			return
-		}
-
-		dateStr, ok := allowedDates[dayInt]
+	// Process stored schedules
+	for _, s := range schedules {
+		dateStr, ok := allowedDates[s.dayInt]
 		if !ok {
 			continue
 		}
 
-		dayName, err := sidefunc_test.Dayofweek(dayInt)
+		dayName, err := sidefunc_test.Dayofweek(s.dayInt)
 		if err != nil {
 			continue
 		}
 
-		slots, err := sidefunc_test.GenerateTimeSlote(durMins, start, end)
+		layout := "15:04"
+		sT := s.start[11:16]
+		eT := s.end[11:16]
+		S, _ := time.Parse(layout, sT)
+		E, _ := time.Parse(layout, eT)
+		startTime := S.Format("15:04")
+		endTime := E.Format("15:04")
+
+		slots, err := sidefunc_test.GenerateTimeSlote(s.durMins, startTime, endTime)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(Response{Message: "Slot generation error", Success: false})
@@ -296,48 +320,46 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, ts := range slots {
-			if dayInt == todayInt && ts.EndTime <= currentTime {
+			if s.dayInt == todayInt && ts.EndTime <= currentTime {
 				continue
 			}
 
+			// Check slot availability in separate query
 			var status string
 			err := tx.QueryRow(`
-				SELECT status 
-				  FROM bookings 
-				 WHERE doctor_id = $1
-				   AND serv_id   = $2
-				   AND day_of_week = $3
-				   AND start_time  = $4
-			`, docID, req.ServId, strconv.Itoa(dayInt), ts.StartTime).Scan(&status)
+				SELECT status
+				FROM bookingTrack_tb
+				WHERE doctor_id   = $1
+				  AND service_id    = $2
+				  AND dayofweek = $3
+				  AND start_time  = $4
+			`, s.docID, req.ServId, s.dayInt, ts.StartTime).Scan(&status)
 
 			if err != nil && err != sql.ErrNoRows {
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(Response{Message: "Booking lookup error", Success: false})
+				log.Println("booking query failed:", err)
 				return
 			}
+
 			if status != "" && status != "cancellation" {
 				continue
 			}
+
 			results = append(results, bkservrespond{
-				DoctorID:       docID,
-				DoctorName:     docName,
+				DoctorID:       s.docID,
+				DoctorName:     s.docName,
 				Servicename:    req.Servicename,
 				StartTime:      ts.StartTime,
 				EndTime:        ts.EndTime,
 				DayOfWeek:      dayName,
 				Date:           dateStr,
-				DurationMinute: durMins,
-				Fee:            fee,
+				DurationMinute: s.durMins,
+				Fee:            s.fee,
 			})
 		}
 	}
-
-	if err := rows.Err(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message: "Rows iteration error", Success: false})
-		return
-	}
-
+     fmt.Println(len(results))
 	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
@@ -345,7 +367,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(Response{
-		Message: "Succesfuly",
+		Message: "Successfully retrieved slots",
 		Success: true,
 		Data:    results,
 	})
