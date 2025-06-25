@@ -24,7 +24,7 @@ func HandleRoutes(r *mux.Router) {
 	shedule.HandleFunc("/docAv", api.DoctorsAvailability).Methods("GET")
 
 	// booking routers
-	bookingRoutes := r.PathPrefix("/booking").Subrouter() //subrouter for the booking
+	bookingRoutes := r.PathPrefix("/booking").Subrouter() 
 
 	bookingRoutes.HandleFunc("/getservice", api.GetService).Methods("GET")
 	bookingRoutes.HandleFunc("/serviceslot", booking.Bookinglogic).Methods("POST")

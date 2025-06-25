@@ -115,14 +115,15 @@ func Connectionpool(databasesourceName string) error {
 		log.Fatalf("Failed to create table serviceAvailable :%v ", err)
 	}
 	serviceAvailable2 := `
-	CREATE TABLE IF NOT EXISTS serviceAvailable (
+	CREATE TABLE IF NOT EXISTS serviceAvailable_tb (
 	  serv2_id SERIAL PRIMARY KEY,
 	  servicename VARCHAR(250) NOT NULL UNIQUE,
 	  fee DECIMAL(10,2) NOT NULL,
 	  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	)
-  `	if _, err = Db.Exec(serviceAvailable2); err != nil {
+  `	
+  if _, err = Db.Exec(serviceAvailable2); err != nil {
 	log.Fatalf("Failed to create table serviceAvailable :%v ", err)
 }
 
@@ -149,6 +150,7 @@ func Connectionpool(databasesourceName string) error {
 		spec_id INTEGER REFERENCES Specialgroup(spec_id),
         doctor_id INTEGER REFERENCES doctors(doctor_id),
         service_id INTEGER REFERENCES serviceAvailable(serv_id),
+		service2_id INTEGER REFERENCES serviceAvailable_tb(serv2_id),
         booking_date DATE NOT NULL,
 		dayofweek INTEGER NOT NULL,
         start_time TIME NOT NULL,
@@ -169,11 +171,12 @@ func Connectionpool(databasesourceName string) error {
         id SERIAL PRIMARY KEY,
         doctor_id INTEGER REFERENCES doctors(doctor_id),
         service_id INTEGER REFERENCES serviceAvailable(serv_id),
+		service2_id INTEGER REFERENCES serviceAvailable_tb(serv2_id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
 	if _, err = Db.Exec(doctorServ_tb); err != nil {
-		log.Fatalf("Failed to create table doctorServ")
+		log.Fatalf("Failed to create table doctorServ",err)
 	}
 
 	return nil

@@ -30,6 +30,11 @@ type (
 		DurationMin int     `json:"duration_time"`
 		Fee         float64 `json:"fee"`
 	}
+	ServAssignpayload2 struct {
+		Servname    string  `json:"servname"`
+		InitalNumber int     `json:"initial_number"`
+		Fee         float64 `json:"fee"`
+	}
 
 	Response struct {
 		Message string      `json:"message"`
@@ -61,6 +66,24 @@ type (
 		Doctorname string `json:"doctorname"`
 	}
 )
+func AssignNonTimeserv (w http.ResponseWriter , r *http.Request){
+	if r.Method  != http.MethodPost{
+		json.NewEncoder(w).Encode(Response{
+			Message:"Invalid payload"
+			Success:false
+		})
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	W.Header().Set("content-Type", "application/json")
+	var Assreq ServAssignpayload2
+	json.NewDecoder(r.Body).Decode(&Assreq)
+	var servname string
+	checkifexisterr := handlerconn.Db.QueryRow(`SELECT servicename FROM serviceAvailable_tb WHERE servicename = $1`, Assreq.Servname).Scan(&servname)
+	if checkifexisterr != nil {
+		if checkifexisterr == sql.ErrNoRows {}
+	}
+}
 
 func AssignService(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
