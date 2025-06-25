@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	sidefunc_test "medquemod/booking/verification"
 	handlerconn "medquemod/db_conn"
@@ -32,111 +33,110 @@ type (
 	}
 	doctorInfo struct {
 		Fullname    string `json:"fullname"`
-		Specialist   string `json:"specialty"`
+		Specialist  string `json:"specialty"`
 		StartTime   string `json:"start_time"`
 		EndTime     string `json:"end_time"`
 		Dayofweek   string `json:"dayofweek"`
 		IsAvailable bool   `json:"isAvailable"`
 	}
 	Service struct {
-		ID                 int     `json:"id"`
-		Servicename           string  `json:"servicename"`
-		ConsultationFee    float64 `json:"consultationFee"`
-		CreatedAt  string `json:"created_at"`
-		DurationMin int `json:"duration_minutes"`
+		ID              int     `json:"id"`
+		Servicename     string  `json:"servicename"`
+		ConsultationFee float64 `json:"consultationFee"`
+		CreatedAt       string  `json:"created_at"`
+		DurationMin     int     `json:"duration_minutes"`
 	}
 )
+
 func DoctorsAvailability(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodGet {
-        w.WriteHeader(http.StatusMethodNotAllowed)
-        json.NewEncoder(w).Encode(Response{
-            Message: "Invalid method; only GET allowed",
-            Success: false,
-        })
-        return
-    }
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid method; only GET allowed",
+			Success: false,
+		})
+		return
+	}
 
-    w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 
-    query := `
+	query := `
         SELECT d.doctorname, d.specialist_name, ds.start_time, ds.end_time, ds.day_of_week
         FROM doctors AS d
         JOIN doctorshedule  AS ds
           ON ds.doctor_id = d.doctor_id
     `
 
-    tx, err := handlerconn.Db.Begin()
-    if err != nil {
-        log.Printf("failed to start transaction: %v", err)
-        json.NewEncoder(w).Encode(Response{"failed to start transaction", false, nil})
-        return
-    }
-    defer tx.Rollback()
+	tx, err := handlerconn.Db.Begin()
+	if err != nil {
+		log.Printf("failed to start transaction: %v", err)
+		json.NewEncoder(w).Encode(Response{"failed to start transaction", false, nil})
+		return
+	}
+	defer tx.Rollback()
 
-    rows, err := tx.Query(query)
-    if err != nil {
-        log.Printf("query failed: %v", err)
-        json.NewEncoder(w).Encode(Response{"query execution failed", false, nil})
-        return
-    }
-    defer rows.Close()
+	rows, err := tx.Query(query)
+	if err != nil {
+		log.Printf("query failed: %v", err)
+		json.NewEncoder(w).Encode(Response{"query execution failed", false, nil})
+		return
+	}
+	defer rows.Close()
 
+	now := time.Now()
 
-    now := time.Now()
+	var doctors []doctorInfo
+	for rows.Next() {
+		var (
+			name, spec, startStr, endStr string
+			dow                          int
+		)
+		if err := rows.Scan(&name, &spec, &startStr, &endStr, &dow); err != nil {
+			log.Printf("row scan error: %v", err)
+			continue
+		}
 
-    var doctors []doctorInfo
-    for rows.Next() {
-        var (
-            name, spec, startStr, endStr string
-            dow                            int
-        )
-        if err := rows.Scan(&name, &spec, &startStr, &endStr, &dow); err != nil {
-            log.Printf("row scan error: %v", err)
-            continue
-        }
+		weekday, err := sidefunc_test.Dayofweek(dow)
+		if err != nil {
+			log.Printf("weekday conversion error: %v", err)
+			weekday = "unknown"
+		}
 
-    
-        weekday, err := sidefunc_test.Dayofweek(dow)
-        if err != nil {
-            log.Printf("weekday conversion error: %v", err)
-            weekday = "unknown"
-        }
+		layout := "2006-01-02T15:04:05Z"
+		sT, err1 := time.ParseInLocation(layout, startStr, now.Location())
+		eT, err2 := time.ParseInLocation(layout, endStr, now.Location())
+		if err1 != nil || err2 != nil {
+			log.Printf("time parse error: %v / %v", err1, err2)
+			continue
+		}
+		layout_T := "15:04 PM"
+		startTime := sT.Format(layout_T)
+		endTime := eT.Format(layout_T)
 
-        
-        layout := "2006-01-02T15:04:05Z"
-        sT, err1 := time.ParseInLocation(layout, startStr, now.Location())
-        eT, err2 := time.ParseInLocation(layout, endStr, now.Location())
-        if err1 != nil || err2 != nil {
-            log.Printf("time parse error: %v / %v", err1, err2)
-            continue
-        }
-		layout_T := "03:04 PM"
-        startTime := sT.Format(layout_T)
-        endTime := eT.Format(layout_T)
-        
-        isAvail := !now.Before(sT) && !now.After(eT)
-        doctors = append(doctors, doctorInfo{
-            Fullname:    name,
-            Specialist:  spec,
-            StartTime:   startTime,
-            EndTime:     endTime,
-            Dayofweek:   weekday,
-            IsAvailable: isAvail,
-        })
-    }
-    if err := rows.Err(); err != nil {
-        log.Printf("row iteration error: %v", err)
-    }
+		isAvail := !now.Before(sT) && !now.After(eT)
+		doctors = append(doctors, doctorInfo{
+			Fullname:    name,
+			Specialist:  spec,
+			StartTime:   startTime,
+			EndTime:     endTime,
+			Dayofweek:   weekday,
+			IsAvailable: isAvail,
+		})
+	}
+	fmt.Println("doctors list", doctors)
+	if err := rows.Err(); err != nil {
+		log.Printf("row iteration error: %v", err)
+	}
 
-    if err := tx.Commit(); err != nil {
-        log.Printf("transaction commit failed: %v", err)
-    }
+	if err := tx.Commit(); err != nil {
+		log.Printf("transaction commit failed: %v", err)
+	}
 
-    json.NewEncoder(w).Encode(Response{
-        Message: "Successfully fetched availability",
-        Success: true,
-        Data:    doctors,
-    })
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfully fetched availability",
+		Success: true,
+		Data:    doctors,
+	})
 }
 
 func Verifyuser(w http.ResponseWriter, r *http.Request) {
@@ -301,7 +301,7 @@ func GetService(w http.ResponseWriter, r *http.Request) {
 		err := rows.Scan(
 			&service.ID,
 			&service.Servicename,
-            &service.DurationMin,
+			&service.DurationMin,
 			&service.ConsultationFee,
 			&service.CreatedAt,
 		)

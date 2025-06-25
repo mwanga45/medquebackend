@@ -114,6 +114,18 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(serviceAvailable); err != nil {
 		log.Fatalf("Failed to create table serviceAvailable :%v ", err)
 	}
+	serviceAvailable2 := `
+	CREATE TABLE IF NOT EXISTS serviceAvailable (
+	  serv2_id SERIAL PRIMARY KEY,
+	  servicename VARCHAR(250) NOT NULL UNIQUE,
+	  fee DECIMAL(10,2) NOT NULL,
+	  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	)
+  `	if _, err = Db.Exec(serviceAvailable2); err != nil {
+	log.Fatalf("Failed to create table serviceAvailable :%v ", err)
+}
+
 		Specialgroup := `
 	CREATE TABLE IF NOT EXISTS Specialgroup (
   spec_id         SERIAL PRIMARY KEY,

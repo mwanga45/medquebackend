@@ -7,6 +7,7 @@ import (
 	"medquemod/booking"
 	handler_chat "medquemod/chatbot"
 	authentic "medquemod/handleauthentic"
+	"medquemod/profile"
 
 	"github.com/gorilla/mux"
 )
@@ -40,5 +41,8 @@ func HandleRoutes(r *mux.Router) {
 	// ROUTES FOR THE DOCTOR
 	dkt := r.PathPrefix("/dkt").Subrouter()
 	dkt.HandleFunc("/register",docact.Registration).Methods("POST")
+	// UserActivit
+	userAct := r.PathPrefix("/user").Subrouter()
+	userAct.HandleFunc("/assignspec", profile.UserAct).Methods("POST")
 
 }

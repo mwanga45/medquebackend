@@ -8,22 +8,31 @@ import (
 	// "medquemod/api"
 	// apiweb "medquemod/api-web"
 	"medquemod/booking"
-	"medquemod/routes"
+	Routesf_test "medquemod/routes"
+
 	// "medquemod/bookingtimelogic"
 	// handler_chat "medquemod/chatbot"
-	"medquemod/db_conn"
+	handlerconn "medquemod/db_conn"
 	// "medquemod/handleauthentic"
 	"net/http"
 	"os"
 	"os/signal"
+
 	// "os/user"
 	"syscall"
 	"time"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found or failed to load")
+	}
+
 	// Create context and signal channel
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -33,8 +42,8 @@ func main() {
 	// Initialize database connection first
 	const conn_string = "user=postgres dbname=medque password=lynx host=localhost sslmode=disable"
 	if err := handlerconn.Connectionpool(conn_string); err != nil {
-				log.Fatalf("something went wrong failed to connect to database %v", err)
-			}
+		log.Fatalf("something went wrong failed to connect to database %v", err)
+	}
 
 	// Start notification worker
 	go booking.StartNotificationWorker(ctx)
@@ -42,16 +51,6 @@ func main() {
 	// Set up router and routes
 	r := mux.NewRouter()
 	Routesf_test.HandleRoutes(r)
-	// r.HandleFunc("/register", authentic.Handler).Methods("POST")
-	// 	r.HandleFunc("/doctorinfo", api.Doctors).Methods("GET")
-	// 	r.HandleFunc("/userinfo", api.Userdetails).Methods("POST")
-	// 	r.HandleFunc("/chatbot",handler_chat.Chatbot).Methods("POST")
-	// 	r.HandleFunc("/verifyuser",api.Verifyuser).Methods("POST")
-	// 	r.HandleFunc("/registerstaff",apiweb.HandleRegisterUser).Methods("POST") //for webapplication
-	// 	r.HandleFunc("/staffsignIn",apiweb.LoginHandler).Methods("POST")//for webapplication
-	// 	r.HandleFunc("/bookinglogic", bookingtimelogic.Timelogic).Methods("GET")
-	// 	r.HandleFunc("/serviceAvailable", api.GetService).Methods("GET")
-		// r.HandleFunc("/bookingrequest", booking.HandleBookingRequest).Methods(("POST"))
 
 	// Configure CORS
 	cors := handlers.CORS(
