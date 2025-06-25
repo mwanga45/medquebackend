@@ -69,20 +69,34 @@ type (
 func AssignNonTimeserv (w http.ResponseWriter , r *http.Request){
 	if r.Method  != http.MethodPost{
 		json.NewEncoder(w).Encode(Response{
-			Message:"Invalid payload"
-			Success:false
+			Message: "Invalid payload",
+			Success: false,
 		})
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	W.Header().Set("content-Type", "application/json")
+	w.Header().Set("content-Type", "application/json")
 	var Assreq ServAssignpayload2
 	json.NewDecoder(r.Body).Decode(&Assreq)
 	var servname string
 	checkifexisterr := handlerconn.Db.QueryRow(`SELECT servicename FROM serviceAvailable_tb WHERE servicename = $1`, Assreq.Servname).Scan(&servname)
 	if checkifexisterr != nil {
-		if checkifexisterr == sql.ErrNoRows {}
+		if checkifexisterr == sql.ErrNoRows {
+			_, queryerr := handlerconn.Db.Exec(`INSERT INTO serviceAvailable_tb (servicename,initial_number, fee) VALUES($1,$2,$3)`, Assreq.Servname, Assreq.InitalNumber, Assreq.Fee)
+			if queryerr != nil {
+				json.NewEncoder(w).Encode(Response{
+					Message: "Internal serverError",
+					Success: false,
+				})
+			}
+		}
 	}
+	json.NewEncoder(w).Encode(Response{
+		Message: "Service is already exist",
+		Success: false,
+		Data:    Assreq.Servname,
+	})
+	return
 }
 
 func AssignService(w http.ResponseWriter, r *http.Request) {
