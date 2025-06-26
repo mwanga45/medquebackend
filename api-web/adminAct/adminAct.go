@@ -4,6 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"strings"
+
 	// sidefunc_test "medquemod/booking/verification"
 	handlerconn "medquemod/db_conn"
 	"net/http"
@@ -66,38 +70,93 @@ type (
 		Doctorname string `json:"doctorname"`
 	}
 )
-func AssignNonTimeserv (w http.ResponseWriter , r *http.Request){
-	if r.Method  != http.MethodPost{
-		json.NewEncoder(w).Encode(Response{
-			Message: "Invalid payload",
-			Success: false,
-		})
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	w.Header().Set("content-Type", "application/json")
-	var Assreq ServAssignpayload2
-	json.NewDecoder(r.Body).Decode(&Assreq)
-	var servname string
-	checkifexisterr := handlerconn.Db.QueryRow(`SELECT servicename FROM serviceAvailable_tb WHERE servicename = $1`, Assreq.Servname).Scan(&servname)
-	if checkifexisterr != nil {
-		if checkifexisterr == sql.ErrNoRows {
-			_, queryerr := handlerconn.Db.Exec(`INSERT INTO serviceAvailable_tb (servicename,initial_number, fee) VALUES($1,$2,$3)`, Assreq.Servname, Assreq.InitalNumber, Assreq.Fee)
-			if queryerr != nil {
-				json.NewEncoder(w).Encode(Response{
-					Message: "Internal serverError",
-					Success: false,
-				})
-			}
-		}
-	}
-	json.NewEncoder(w).Encode(Response{
-		Message: "Service is already exist",
-		Success: false,
-		Data:    Assreq.Servname,
-	})
-	return
+func AssignNonTimeserv(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, `{"message":"Invalid method","success":false}`, http.StatusMethodNotAllowed)
+        return
+    }
+    w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+    // --- 1) Read & log the raw body (for debugging) ---
+    body, err := io.ReadAll(r.Body)
+    if err != nil {
+        log.Printf("[AssignNonTimeserv] read body error: %v\n", err)
+        http.Error(w, `{"message":"Cannot read body","success":false}`, http.StatusBadRequest)
+        return
+    }
+    log.Printf("[AssignNonTimeserv] raw JSON: %s\n", string(body))
+
+    // --- 2) Decode into your struct ---
+    var req ServAssignpayload2
+    if err := json.Unmarshal(body, &req); err != nil {
+        log.Printf("[AssignNonTimeserv] JSON decode error: %v\n", err)
+        http.Error(w, `{"message":"Bad JSON","success":false}`, http.StatusBadRequest)
+        return
+    }
+    log.Printf("[AssignNonTimeserv] decoded struct: %+v\n", req)
+
+    // --- 3) Check for missing/invalid fields yourself ---
+    if strings.TrimSpace(req.Servname) == "" {
+        log.Println("[AssignNonTimeserv] validation error: servname empty")
+        http.Error(w, `{"message":"Service name required","success":false}`, http.StatusBadRequest)
+        return
+    }
+    if req.InitalNumber <= 0 {
+        log.Println("[AssignNonTimeserv] validation error: initial_number <= 0")
+        http.Error(w, `{"message":"Initial number must >0","success":false}`, http.StatusBadRequest)
+        return
+    }
+    if req.Fee <= 0 {
+        log.Println("[AssignNonTimeserv] validation error: fee <= 0")
+        http.Error(w, `{"message":"Fee must >0","success":false}`, http.StatusBadRequest)
+        return
+    }
+
+    // --- 4) Check existence and insert ---
+    var existing string
+    err = handlerconn.Db.
+        QueryRow(`SELECT servicename FROM serviceAvailable_tb WHERE servicename=$1`, req.Servname).
+        Scan(&existing)
+
+    switch {
+    case err == sql.ErrNoRows:
+        // does not exist → try insert
+        if _, err := handlerconn.Db.Exec(
+            `INSERT INTO serviceAvailable_tb (servicename, initial_number, fee) VALUES ($1,$2,$3)`,
+            req.Servname, req.InitalNumber, req.Fee,
+        ); err != nil {
+            log.Printf("[AssignNonTimeserv] DB insert error: %v\n", err)
+            http.Error(w, `{"message":"Internal server error","success":false}`, http.StatusInternalServerError)
+            return
+        }
+        log.Printf("[AssignNonTimeserv] inserted: %q\n", req.Servname)
+        w.WriteHeader(http.StatusCreated)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Non-time service created",
+            Success: true,
+            Data:    req.Servname,
+        })
+        return
+
+    case err != nil:
+        // some other query error
+        log.Printf("[AssignNonTimeserv] DB query error: %v\n", err)
+        http.Error(w, `{"message":"Database error","success":false}`, http.StatusInternalServerError)
+        return
+
+    default:
+        // already exists
+        log.Printf("[AssignNonTimeserv] already exists: %q\n", existing)
+        w.WriteHeader(http.StatusConflict)
+        json.NewEncoder(w).Encode(Response{
+            Message: "Service already exists",
+            Success: false,
+            Data:    existing,
+        })
+        return
+    }
 }
+
 
 func AssignService(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

@@ -118,6 +118,7 @@ func Connectionpool(databasesourceName string) error {
 	CREATE TABLE IF NOT EXISTS serviceAvailable_tb (
 	  serv2_id SERIAL PRIMARY KEY,
 	  servicename VARCHAR(250) NOT NULL UNIQUE,
+	  initial_number INTEGER NOT NULL,
 	  fee DECIMAL(10,2) NOT NULL,
 	  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

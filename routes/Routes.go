@@ -32,7 +32,7 @@ func HandleRoutes(r *mux.Router) {
 	// ROUTES FOR THE ADMIN
 	Adm := r.PathPrefix("/adim").Subrouter()
 	Adm.HandleFunc("/registerserv",adminact.AssignService ).Methods("POST")
-	Adm.HandleFunc("/registerserv2",adminact.AssignNonTimeserv).Methods("POST")
+    Adm.HandleFunc("/regiNonIntervalserv",adminact.AssignNonTimeserv).Methods("POST")
 	Adm.HandleFunc("/docshedule", adminact.Asdocshedule).Methods("POST")
 	Adm.HandleFunc("/regspecilist",adminact.RegSpecialist).Methods("POST")
 	Adm.HandleFunc("/getspecInfo",adminact.ReturnSpec).Methods("GET")
