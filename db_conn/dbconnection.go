@@ -177,7 +177,7 @@ func Connectionpool(databasesourceName string) error {
       )
     `
 	if _, err = Db.Exec(doctorServ_tb); err != nil {
-		log.Fatalf("Failed to create table doctorServ",err)
+		log.Fatalf("Failed to create table doctorServ: %v",err)
 	}
 
 	return nil
