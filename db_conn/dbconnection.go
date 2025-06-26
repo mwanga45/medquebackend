@@ -2,6 +2,8 @@ package handlerconn
 
 import (
 	"database/sql"
+	"fmt"
+	"os"
 	_ "github.com/lib/pq"
 	"log"
 	"time"
@@ -10,11 +12,18 @@ import (
 var Db *sql.DB
 
 // initilaze connection pool
-func Connectionpool(databasesourceName string) error {
+func Connectionpool() error {
 	var err error
-	if Db, err = sql.Open("postgres", databasesourceName); err != nil {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		return fmt.Errorf("DATABASE_URL environment variable is not set")
+	}
+	log.Printf("Connecting to database with URL: %s", databaseURL)
+	if Db, err = sql.Open("postgres", databaseURL); err != nil {
+		log.Printf("Failed to open database connection: %v", err)
 		return err
 	}
+	log.Println("Database connection opened successfully")
 
 	Db.SetMaxOpenConns(25)
 	Db.SetConnMaxIdleTime(25)
@@ -22,16 +31,20 @@ func Connectionpool(databasesourceName string) error {
 
 	// Db.Ping used to verify if the connection is alive and properly configured
 	if err = Db.Ping(); err != nil {
+		log.Printf("Failed to ping database: %v", err)
 		return err
 	}
+	log.Println("Successfully connected to database")
 	specialist := `CREATE TABLE IF NOT EXISTS specialist (
   specialist VARCHAR(200)    PRIMARY KEY,
   description TEXT          
 );
 `
 	if _, err = Db.Exec(specialist); err != nil {
-		log.Fatalf("failed to create table %v", err)
+		log.Printf("Failed to create specialist table: %v", err)
+		return err
 	}
+	log.Println("Table 'specialist' created or already exists.")
 
 	doctor_tb := `
       CREATE TABLE IF NOT EXISTS doctors (
@@ -56,6 +69,7 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(doctor_tb); err != nil {
 		log.Fatalf("failed to create new table %v", err)
 	}
+	log.Println("Table 'doctors' created or already exists.")
 
 	const doctorShedule = `
       CREATE TABLE IF NOT EXISTS doctorshedule (
@@ -71,8 +85,9 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(doctorShedule); err != nil {
 		log.Fatalf("failed to create new table %v", err)
 	}
+	log.Println("Table 'doctorshedule' created or already exists.")
 
-	user_tb := `CREATE TABLE IF NOT EXISTS Users (
+	user_tb := `CREATE TABLE IF NOT EXISTS users (
 		user_id  SERIAL  PRIMARY KEY ,
 		fullname VARCHAR(150) NOT NULL,
 		Secretekey VARCHAR(200) NOT NULL, 
@@ -87,6 +102,7 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(user_tb); err != nil {
 		log.Fatalf("failed to create table patient_tb %v", err)
 	}
+	log.Println("Table 'users' created or already exists.")
 
 	scheduled_notificationstb := `CREATE TABLE IF NOT EXISTS scheduled_notifications (
 		id SERIAL PRIMARY KEY,
@@ -101,6 +117,7 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(scheduled_notificationstb); err != nil {
 		log.Fatalf("failed to create table sheduled notification table:%v", err)
 	}
+	log.Println("Table 'scheduled_notifications' created or already exists.")
 	serviceAvailable := `
       CREATE TABLE IF NOT EXISTS serviceAvailable (
         serv_id SERIAL PRIMARY KEY,
@@ -114,6 +131,7 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(serviceAvailable); err != nil {
 		log.Fatalf("Failed to create table serviceAvailable :%v ", err)
 	}
+	log.Println("Table 'serviceAvailable' created or already exists.")
 	serviceAvailable2 := `
 	CREATE TABLE IF NOT EXISTS serviceAvailable_tb (
 	  serv2_id SERIAL PRIMARY KEY,
@@ -127,6 +145,7 @@ func Connectionpool(databasesourceName string) error {
   if _, err = Db.Exec(serviceAvailable2); err != nil {
 	log.Fatalf("Failed to create table serviceAvailable :%v ", err)
 }
+log.Println("Table 'serviceAvailable_tb' created or already exists.")
 
 		Specialgroup := `
 	CREATE TABLE IF NOT EXISTS Specialgroup (
@@ -134,17 +153,18 @@ func Connectionpool(databasesourceName string) error {
   username        VARCHAR(200),
   secretkey       VARCHAR(200),
   age             INTEGER,
-  managedby_id    INTEGER REFERENCES Users(user_id),
+  managedby_id    INTEGER REFERENCES users(user_id),
   dialforCreator  VARCHAR(20),
   dialforUser     VARCHAR(20),
   reason          TEXT NOT NULL,
-  FOREIGN KEY (dialforCreator) REFERENCES Users(dial),
-  FOREIGN KEY (dialforUser)    REFERENCES Users(dial)
+  FOREIGN KEY (dialforCreator) REFERENCES users(dial),
+  FOREIGN KEY (dialforUser)    REFERENCES users(dial)
 	)
 	`
 	if _, err = Db.Exec(Specialgroup); err != nil {
 		log.Fatal("Failed to create table specialgroup",err)
 	}
+	log.Println("Table 'Specialgroup' created or already exists.")
 	bookingtracking := `CREATE TABLE IF NOT EXISTS bookingTrack_tb (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(user_id),
@@ -166,6 +186,7 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(bookingtracking); err != nil {
 		log.Fatalf("Failed to create table bookingTracking :%v", err)
 	}
+	log.Println("Table 'bookingTrack_tb' created or already exists.")
 
 	doctorServ_tb := `
 	   CREATE TABLE IF NOT EXISTS doctor_services (
@@ -179,6 +200,7 @@ func Connectionpool(databasesourceName string) error {
 	if _, err = Db.Exec(doctorServ_tb); err != nil {
 		log.Fatalf("Failed to create table doctorServ: %v",err)
 	}
+	log.Println("Table 'doctor_services' created or already exists.")
 
 	return nil
 

@@ -29,8 +29,9 @@ import (
 
 func main() {
 	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found or failed to load")
+	envPath := ".env"
+	if err := godotenv.Load(envPath); err != nil {
+		log.Printf("Warning: .env file not found at %s or failed to load: %v", envPath, err)
 	}
 
 	// Create context and signal channel
@@ -40,8 +41,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Initialize database connection first
-	const conn_string = "user=postgres dbname=medque password=lynx host=localhost sslmode=disable"
-	if err := handlerconn.Connectionpool(conn_string); err != nil {
+	if err := handlerconn.Connectionpool(); err != nil {
 		log.Fatalf("something went wrong failed to connect to database %v", err)
 	}
 
@@ -61,13 +61,13 @@ func main() {
 
 	// Create HTTP server with proper configuration
 	server := &http.Server{
-		Addr:    ":8800",
+		Addr:    ":8801",
 		Handler: cors(r),
 	}
 
 	// Start server in a goroutine
 	go func() {
-		fmt.Println("Server listening on port 8800...")
+		fmt.Println("Server listening on port 8801...")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed: %v", err)
 		}
