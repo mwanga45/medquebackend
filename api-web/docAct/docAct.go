@@ -27,7 +27,23 @@ type (
 		Email      string `json:"email" validate:"required"`
 
 	}
+	Stafflogin struct{
+		RegNo string `json:"regNo" validate:"required"`
+		Password string `json:"password" validate:"required"`
+		Username string `json:"username" validate:"required"`
+	}
 )
+
+func DoctLogin(w http.ResponseWriter, r*http.Request)  {
+	if r.Method != http.MethodPost{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid payload",
+			Success: false,
+		})
+	}
+	
+}
 
 func Registration(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
