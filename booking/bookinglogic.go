@@ -205,17 +205,19 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 	var bookingID int
 	err = client.QueryRow(`SELECT id FROM bookingtrack_tb WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, UserId).Scan(&bookingID)
 	if err == nil {
-		_, errNotif := handlerconn.Db.Exec(`INSERT INTO scheduled_notifications (booking_id) VALUES ($1)`, bookingID)
+		_, errNotif := handlerconn.Db.Exec(`INSERT INTO scheduled_notifications (booking_id, status) VALUES ($1, 'pending')`, bookingID)
 		if errNotif != nil {
 			log.Printf("Failed to insert scheduled notification: %v", errNotif)
+		} else {
+			log.Printf("Scheduled notification created for booking ID: %d", bookingID)
 		}
 	} else {
 		log.Printf("Failed to get booking id for notification: %v", err)
 	}
 
 	json.NewEncoder(w).Encode(Response{
-		Message: "Successfuly make booking",
-		Success: false,
+		Message: "Successfully make booking",
+		Success: true,
 	})
 }
 func Bookinglogic(w http.ResponseWriter, r *http.Request) {
@@ -387,6 +389,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 // Use built-in Expo push notification logic
 // This function triggers the built-in notification worker to process and send pending notifications
 func TriggerExpoPushNotifications() {
-	// checkPendingNotifications is defined in booking.go and uses SendNotification and scheduleFromDB
-	checkPendingNotifications()
+	// checkPendingNotifications is defined in notify.go and uses SendNotification
+	ManualTriggerNotifications()
 }

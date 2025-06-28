@@ -28,6 +28,7 @@ func HandleRoutes(r *mux.Router) {
 
 	bookingRoutes.HandleFunc("/getservice", api.GetService).Methods("GET")
 	bookingRoutes.HandleFunc("/serviceslot", booking.Bookinglogic).Methods("POST")
+	bookingRoutes.HandleFunc("/bookingreq",booking.Bookingpayload).Methods("POST")
 
 	// ROUTES FOR THE ADMIN
 	Adm := r.PathPrefix("/adim").Subrouter()

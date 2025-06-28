@@ -86,56 +86,91 @@ func isValidExpoToken(token string) bool {
 }
 
 func checkPendingNotifications() {
-	query := `SELECT sn.id, u.fullname, u.deviceid, sn.notification_time
+	query := `SELECT sn.id, u.fullname, u.deviceid, b.booking_date, b.start_time, b.id as booking_id
 		FROM scheduled_notifications sn
 		JOIN bookingtrack_tb b ON sn.booking_id = b.id
 		JOIN users u ON b.user_id = u.user_id
 		WHERE (sn.status IS NULL OR sn.status = 'pending')
-		AND sn.notification_time > NOW()`
+		AND (b.booking_date || ' ' || b.start_time)::timestamp > NOW()`
+
 	rows, err := handlerconn.Db.Query(query)
 	if err != nil {
 		log.Printf("Query error: %v", err)
 		return
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var (
-			id               int
-			username         string
-			deviceID         string
-			notificationTime time.Time
+			id          int
+			username    string
+			deviceID    string
+			bookingDate time.Time
+			startTime   string
+			bookingID   int
 		)
-		if err := rows.Scan(&id, &username, &deviceID, &notificationTime); err != nil {
+
+		if err := rows.Scan(&id, &username, &deviceID, &bookingDate, &startTime, &bookingID); err != nil {
 			log.Printf("Row scan error: %v", err)
 			continue
 		}
-		msg := ExpoMessage{
-			To:    deviceID,
-			Title: "Booking Reminder",
-			Body:  fmt.Sprintf("Hi %s, you have a booking coming up soon!", username),
-			Sound: "default",
+
+		// Parse the start time
+		startTimeParsed, err := time.Parse("15:04:05", startTime)
+		if err != nil {
+			log.Printf("Time parse error: %v", err)
+			continue
 		}
-		if notificationTime.After(time.Now()) {
+
+		// Create the full booking datetime
+		bookingDateTime := time.Date(
+			bookingDate.Year(), bookingDate.Month(), bookingDate.Day(),
+			startTimeParsed.Hour(), startTimeParsed.Minute(), startTimeParsed.Second(),
+			0, time.UTC,
+		)
+
+		// Calculate notification time (5 minutes before booking)
+		notificationTime := bookingDateTime.Add(-5 * time.Minute)
+		currentTime := time.Now()
+
+		// Check if it's time to send notification (within 1 minute of notification time)
+		if currentTime.After(notificationTime) && currentTime.Before(notificationTime.Add(1*time.Minute)) {
+			msg := ExpoMessage{
+				To:    deviceID,
+				Title: "Booking Reminder",
+				Body:  fmt.Sprintf("Hi %s, your booking is in 5 minutes at %s!", username, startTime),
+				Sound: "default",
+			}
+
 			if err := SendNotification(msg); err != nil {
 				log.Printf("Failed to send notification: %v", err)
 				updateNotificationStatus(id, "failed")
 				continue
 			}
+
 			updateNotificationStatus(id, "sent")
-		} else {
+			log.Printf("Notification sent for booking ID %d", bookingID)
+		} else if currentTime.After(bookingDateTime) {
+			// Booking time has passed, mark as expired
 			updateNotificationStatus(id, "expired")
+			log.Printf("Notification expired for booking ID %d", bookingID)
 		}
+		// If notification time hasn't come yet, leave as pending
 	}
+
 	if err = rows.Err(); err != nil {
 		log.Printf("Row iteration error: %v", err)
 	}
 }
 
 func StartNotificationWorker(ctx context.Context) {
-	log.Println("Starting notification worker")
+	log.Println("Starting notification worker - checking every minute for pending notifications")
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
+
+	// Check immediately on startup
 	checkPendingNotifications()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -145,4 +180,39 @@ func StartNotificationWorker(ctx context.Context) {
 			checkPendingNotifications()
 		}
 	}
+}
+
+// GetNotificationStatus - for debugging and monitoring
+func GetNotificationStatus() (map[string]int, error) {
+	query := `SELECT status, COUNT(*) as count 
+		FROM scheduled_notifications 
+		GROUP BY status`
+
+	rows, err := handlerconn.Db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %w", err)
+	}
+	defer rows.Close()
+
+	statusCounts := make(map[string]int)
+	for rows.Next() {
+		var status string
+		var count int
+		if err := rows.Scan(&status, &count); err != nil {
+			return nil, fmt.Errorf("scan error: %w", err)
+		}
+		statusCounts[status] = count
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return statusCounts, nil
+}
+
+// ManualTriggerNotifications - for testing purposes
+func ManualTriggerNotifications() {
+	log.Println("Manually triggering notification check...")
+	checkPendingNotifications()
 }

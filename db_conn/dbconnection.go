@@ -185,6 +185,7 @@ func Connectionpool() error {
 	scheduled_notificationstb := `CREATE TABLE IF NOT EXISTS scheduled_notifications (
 		id SERIAL PRIMARY KEY,
 		booking_id INTEGER REFERENCES bookingtrack_tb(id),
+		status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed', 'expired')),
 		created_at TIMESTAMPTZ DEFAULT NOW(),
 		updated_at TIMESTAMPTZ DEFAULT NOW()
 	  );`
