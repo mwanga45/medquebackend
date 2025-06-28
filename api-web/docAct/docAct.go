@@ -42,6 +42,7 @@ func DoctLogin(w http.ResponseWriter, r*http.Request)  {
 			Success: false,
 		})
 	}
+	w.Header().Set("content-type","application/json")
 	
 }
 
