@@ -98,7 +98,7 @@ func DoctLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate required fields
+
 	if staffLogin.Username == "" || staffLogin.RegNo == "" || staffLogin.Password == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{
@@ -108,7 +108,7 @@ func DoctLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate registration number format
+
 	isValid := sidefunc_test.CheckIdentifiaction(staffLogin.RegNo)
 	if !isValid {
 		w.WriteHeader(http.StatusBadRequest)
@@ -171,13 +171,13 @@ func DoctLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prepare login response
+
 	loginResponse := LoginResponse{
 		Token:  token,
 		Doctor: doctorData,
 	}
 
-	// Return successful response
+	
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
 		Message: "Login successful",
