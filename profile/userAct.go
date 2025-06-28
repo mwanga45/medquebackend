@@ -131,19 +131,3 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		Data:    specialnames,
 	})
 }
-
-// func Profile( w http.ResponseWriter, r *http.Request){
-// 	if r.Method != http.MethodGet{
-// 		w.WriteHeader(http.StatusMethodNotAllowed)
-// 		json.NewEncoder(w).Encode(Response{
-// 			Message: "Invalid payload",
-// 			Success: false,
-// 		})
-// 		return
-// 	}
-// 	w.Header().Set("content-type", "application/json")
-
-//    var username st
-// 	QueryError := handlerconn.Db.QueryRow()
-
-// }

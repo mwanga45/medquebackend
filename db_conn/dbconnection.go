@@ -117,21 +117,6 @@ func Connectionpool() error {
 	}
 	log.Println("Table 'users' created or already exists.")
 
-	scheduled_notificationstb := `CREATE TABLE IF NOT EXISTS scheduled_notifications (
-  id SERIAL PRIMARY KEY,
-  username VARCHAR(255) NOT NULL,
-  device_id VARCHAR(255) NOT NULL,
-  notification_time TIMESTAMPTZ NOT NULL,
-  booking_time TIMESTAMPTZ NOT NULL,
-  status VARCHAR(20) DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);`
-	if _, err = Db.Exec(scheduled_notificationstb); err != nil {
-		log.Fatalf("failed to create table scheduled_notifications: %v", err)
-	}
-	log.Println("Table 'scheduled_notifications' created or already exists.")
-
 	serviceAvailable := `
   CREATE TABLE IF NOT EXISTS serviceavailable (
     serv_id SERIAL PRIMARY KEY,
@@ -197,6 +182,16 @@ func Connectionpool() error {
 		log.Fatalf("Failed to create table bookingtrack_tb :%v", err)
 	}
 	log.Println("Table 'bookingtrack_tb' created or already exists.")
+	scheduled_notificationstb := `CREATE TABLE IF NOT EXISTS scheduled_notifications (
+		id SERIAL PRIMARY KEY,
+		booking_id INTEGER REFERENCES bookingtrack_tb(id),
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		updated_at TIMESTAMPTZ DEFAULT NOW()
+	  );`
+	if _, err = Db.Exec(scheduled_notificationstb); err != nil {
+		log.Fatalf("failed to create table scheduled_notifications: %v", err)
+	}
+	log.Println("Table 'scheduled_notifications' created or already exists.")
 
 	doctorServ_tb := `
 	   CREATE TABLE IF NOT EXISTS doctor_services (

@@ -1,7 +1,6 @@
 package booking
 
 import (
-
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -19,8 +18,8 @@ import (
 
 type (
 	Bkservrequest struct {
-		ServId       int `json:"servid"      validate:"required"`
-		IntervalTime int `json:"timeInter"   validate:"required"`
+		ServId       int    `json:"servid"      validate:"required"`
+		IntervalTime int    `json:"timeInter"   validate:"required"`
 		Servicename  string `json:"servicename" validate:"required"`
 	}
 
@@ -201,11 +200,23 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
 		return
 	}
+
+	// After successful booking, insert into scheduled_notifications
+	var bookingID int
+	err = client.QueryRow(`SELECT id FROM bookingtrack_tb WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, UserId).Scan(&bookingID)
+	if err == nil {
+		_, errNotif := handlerconn.Db.Exec(`INSERT INTO scheduled_notifications (booking_id) VALUES ($1)`, bookingID)
+		if errNotif != nil {
+			log.Printf("Failed to insert scheduled notification: %v", errNotif)
+		}
+	} else {
+		log.Printf("Failed to get booking id for notification: %v", err)
+	}
+
 	json.NewEncoder(w).Encode(Response{
 		Message: "Successfuly make booking",
 		Success: false,
 	})
-
 }
 func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -254,13 +265,13 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	// Store schedules in memory and close rows immediately
 	type schedule struct {
-		docID    int
-		docName  string
-		dayInt   int
-		start    string
-		end      string
-		durMins  int
-		fee      float64
+		docID   int
+		docName string
+		dayInt  int
+		start   string
+		end     string
+		durMins int
+		fee     float64
 	}
 	var schedules []schedule
 	for rows.Next() {
@@ -359,7 +370,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-     fmt.Println(results)
+	fmt.Println(results)
 	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
@@ -371,4 +382,11 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Data:    results,
 	})
+}
+
+// Use built-in Expo push notification logic
+// This function triggers the built-in notification worker to process and send pending notifications
+func TriggerExpoPushNotifications() {
+	// checkPendingNotifications is defined in booking.go and uses SendNotification and scheduleFromDB
+	checkPendingNotifications()
 }
