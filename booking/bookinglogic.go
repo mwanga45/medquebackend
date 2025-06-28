@@ -69,6 +69,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			Success: false,
 		})
 		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Println()
 		return
 	}
 	var (

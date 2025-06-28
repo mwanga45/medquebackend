@@ -7,44 +7,48 @@ import (
 	"medquemod/booking"
 	handler_chat "medquemod/chatbot"
 	authentic "medquemod/handleauthentic"
+	"medquemod/middleware"
 	"medquemod/profile"
 
 	"github.com/gorilla/mux"
 )
+
 func HandleRoutes(r *mux.Router) {
 
-	auth:= r.PathPrefix("/auth").Subrouter() //subrouter for the authentication
-  
+	auth := r.PathPrefix("/auth").Subrouter() //subrouter for the authentication
+
 	// Authentication alongSide   the  chatbot routes
-	auth.HandleFunc("/login",authentic.HandleLogin).Methods("POST")
+	auth.HandleFunc("/login", authentic.HandleLogin).Methods("POST")
 	auth.HandleFunc("/register", authentic.Handler).Methods("POST")
 	auth.HandleFunc("/chatbot", handler_chat.Chatbot).Methods("POST")
 	//  SHEDULE  ROUTER FOR DOCTOR INFORMATION
 	shedule := r.PathPrefix("/info").Subrouter()
 	shedule.HandleFunc("/docAv", api.DoctorsAvailability).Methods("GET")
 
-	// booking routers
-	bookingRoutes := r.PathPrefix("/booking").Subrouter() 
+	// booking routers - protected with authentication middleware
+	bookingRoutes := r.PathPrefix("/booking").Subrouter()
+	bookingRoutes.Use(middleware.VerifyTokenMiddleware)
 
 	bookingRoutes.HandleFunc("/getservice", api.GetService).Methods("GET")
 	bookingRoutes.HandleFunc("/serviceslot", booking.Bookinglogic).Methods("POST")
-	bookingRoutes.HandleFunc("/bookingreq",booking.Bookingpayload).Methods("POST")
+	bookingRoutes.HandleFunc("/bookingreq", booking.Bookingpayload).Methods("POST")
 
 	// ROUTES FOR THE ADMIN
 	Adm := r.PathPrefix("/adim").Subrouter()
-	Adm.HandleFunc("/registerserv",adminact.AssignService ).Methods("POST")
-    Adm.HandleFunc("/regiNonIntervalserv",adminact.AssignNonTimeserv).Methods("POST")
+	Adm.HandleFunc("/registerserv", adminact.AssignService).Methods("POST")
+	Adm.HandleFunc("/regiNonIntervalserv", adminact.AssignNonTimeserv).Methods("POST")
 	Adm.HandleFunc("/docshedule", adminact.Asdocshedule).Methods("POST")
-	Adm.HandleFunc("/regspecilist",adminact.RegSpecialist).Methods("POST")
-	Adm.HandleFunc("/getspecInfo",adminact.ReturnSpec).Methods("GET")
-	Adm.HandleFunc("/docAsgnServ",adminact.DocServAssign).Methods("POST")
+	Adm.HandleFunc("/regspecilist", adminact.RegSpecialist).Methods("POST")
+	Adm.HandleFunc("/getspecInfo", adminact.ReturnSpec).Methods("GET")
+	Adm.HandleFunc("/docAsgnServ", adminact.DocServAssign).Methods("POST")
 	Adm.HandleFunc("/DocVsServ", adminact.DocVsServ).Methods("GET")
 
 	// ROUTES FOR THE DOCTOR
 	dkt := r.PathPrefix("/dkt").Subrouter()
-	dkt.HandleFunc("/register",docact.Registration).Methods("POST")
+	dkt.HandleFunc("/register", docact.Registration).Methods("POST")
 	// UserActivit
 	userAct := r.PathPrefix("/user").Subrouter()
+	userAct.Use(middleware.VerifyTokenMiddleware) // Protect user routes with authentication
 	userAct.HandleFunc("/assignspec", profile.UserAct).Methods("POST")
 
 }
