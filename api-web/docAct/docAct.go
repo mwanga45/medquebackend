@@ -276,7 +276,7 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		log.Println("something went  wrong", err)
 		return
 	}
-	_, errEXec := client.Exec(`INSERT INTO doctors (doctorname, password, email, specialist_name,phone, identification, role) VALUES($1,$2,$3,$4,$5,$6,$7) `, stafreg.Doctorname, hashedpwrd, stafreg.Email, stafreg.Specialist, stafreg.Phone, stafreg.RegNo, "dkt")
+	_, errEXec := client.Exec(`INSERT INTO doctors (doctorname, password, email, specialist_name,phone, identification, role,assgn_status) VALUES($1,$2,$3,$4,$5,$6,$7,$8) `, stafreg.Doctorname, hashedpwrd, stafreg.Email, stafreg.Specialist, stafreg.Phone, stafreg.RegNo, "dkt",false)
 	if errEXec != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{

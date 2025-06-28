@@ -224,14 +224,3 @@ func Checkpassword(pwrd , cpwrd string)(bool){
 	return false
    }
 }
-// func CheckForRowValue(client *sql.DB,checkedValue2 string, query string)(bool,error){
-// 	var isExist bool
-// 	errChecked := client.QueryRow(query).Scan(isExist)
-// 	if errChecked != nil{
-// 		return false, fmt.Errorf("failde to exicute query:%w",errChecked)
-// 	}
-// 	if !isExist{
-// 		return false,fmt.Errorf("the value is not exist ")
-// 	}
-// 	return true, nil
-// }

@@ -7,10 +7,13 @@ import (
 	"io"
 	"log"
 	"strings"
+	"time"
 
 	// sidefunc_test "medquemod/booking/verification"
 	handlerconn "medquemod/db_conn"
 	"net/http"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type (
@@ -69,7 +72,147 @@ type (
 		Servname   string `json:"servname"`
 		Doctorname string `json:"doctorname"`
 	}
+
+	// Admin login structures
+	AdminLoginRequest struct {
+		Username string `json:"username" validate:"required"`
+		Password string `json:"password" validate:"required"`
+	}
+
+	AdminData struct {
+		AdminID  int    `json:"admin_id"`
+		Username string `json:"username"`
+		Role     string `json:"role"`
+		Email    string `json:"email"`
+	}
+
+	AdminLoginResponse struct {
+		Token string    `json:"token"`
+		Admin AdminData `json:"admin"`
+	}
+
+	DoctorInfoResponse struct {
+		DoctorID    int    `json:"doctor_id"`
+		Doctorname  string `json:"doctorname"`
+		Email       string `json:"email"`
+		Specialist  string `json:"specialist_name"`
+		Phone       string `json:"phone"`
+		AssgnStatus bool   `json:"assgn_status"`
+	}
 )
+
+// JWT Claims structure for admin
+type AdminClaims struct {
+	AdminID  int    `json:"admin_id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	jwt.RegisteredClaims
+}
+
+// Generate JWT token for admin
+func generateAdminToken(adminID int, username, role string) (string, error) {
+	secretKey := []byte("admin-secret-key-here")
+
+	claims := AdminClaims{
+		AdminID:  adminID,
+		Username: username,
+		Role:     role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // Token expires in 24 hours
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(secretKey)
+}
+
+const (
+	ADMIN_USERNAME = "admin"
+	ADMIN_PASSWORD = "admin123"
+	ADMIN_EMAIL    = "admin@medque.com"
+	ADMIN_ID       = 1
+	ADMIN_ROLE     = "admin"
+)
+
+// AdminLogin endpoint - hardcoded authentication
+func AdminLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Method not allowed",
+			Success: false,
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var adminLogin AdminLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&adminLogin); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid request body",
+			Success: false,
+		})
+		return
+	}
+
+	// Validate required fields
+	if adminLogin.Username == "" || adminLogin.Password == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Username and password are required",
+			Success: false,
+		})
+		return
+	}
+
+	// Check hardcoded credentials
+	if adminLogin.Username != ADMIN_USERNAME || adminLogin.Password != ADMIN_PASSWORD {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid username or password",
+			Success: false,
+		})
+		return
+	}
+
+	// Generate JWT token
+	token, err := generateAdminToken(ADMIN_ID, ADMIN_USERNAME, ADMIN_ROLE)
+	if err != nil {
+		log.Printf("Token generation error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Failed to generate authentication token",
+			Success: false,
+		})
+		return
+	}
+
+	// Prepare admin data
+	adminData := AdminData{
+		AdminID:  ADMIN_ID,
+		Username: ADMIN_USERNAME,
+		Role:     ADMIN_ROLE,
+		Email:    ADMIN_EMAIL,
+	}
+
+	// Prepare login response
+	loginResponse := AdminLoginResponse{
+		Token: token,
+		Admin: adminData,
+	}
+
+	// Return successful response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(Response{
+		Message: "Admin login successful",
+		Success: true,
+		Data:    loginResponse,
+	})
+}
 
 func AssignNonTimeserv(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -386,7 +529,7 @@ func ReturnSpec(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Something went wrong", err)
 		return
 	}
-
+	fmt.Println(specialists)
 	json.NewEncoder(w).Encode(Response{
 		Message: "Successfuly",
 		Success: true,
@@ -499,5 +642,73 @@ func DocVsServ(w http.ResponseWriter, r *http.Request) {
 		Message: "Success",
 		Success: true,
 		Data:    finalResponse,
+	})
+}
+
+// add another function that will get doctor information
+func GetDoctorInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Method not allowed",
+			Success: false,
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Query to get doctor information with required fields
+	rows, err := handlerconn.Db.Query(`
+		SELECT doctor_id, doctorname, email, specialist_name, phone, assgn_status 
+		FROM doctors 
+		WHERE assgn_status = false
+		ORDER BY doctor_id
+	`)
+	if err != nil {
+		log.Printf("Database query error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Failed to fetch doctor information",
+			Success: false,
+		})
+		return
+	}
+	defer rows.Close()
+
+	var doctors []DoctorInfoResponse
+	for rows.Next() {
+		var doctor DoctorInfoResponse
+		err := rows.Scan(
+			&doctor.DoctorID,
+			&doctor.Doctorname,
+			&doctor.Email,
+			&doctor.Specialist,
+			&doctor.Phone,
+			&doctor.AssgnStatus,
+		)
+		if err != nil {
+			log.Printf("Error scanning doctor row: %v", err)
+			continue
+		}
+		doctors = append(doctors, doctor)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("Error iterating over rows: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Error processing doctor data",
+			Success: false,
+		})
+		return
+	}
+
+	
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(Response{
+		Message: "Doctor information retrieved successfully",
+		Success: true,
+		Data:    doctors,
 	})
 }

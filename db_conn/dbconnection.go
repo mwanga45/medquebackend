@@ -72,6 +72,7 @@ func Connectionpool() error {
     phone VARCHAR(20),
     identification VARCHAR(250) NOT NULL UNIQUE,
     role VARCHAR(20) DEFAULT 'dkt',
+	assgn_status boolean NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_specialist_name
