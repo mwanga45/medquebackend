@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	sidefunc_test "medquemod/booking/verification"
@@ -57,7 +58,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
-			Message: "Invalid payload",
+			Message: "Invalid Method",
 			Success: false,
 		})
 		return
@@ -87,9 +88,14 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			client.Rollback()
+		}
+	}()
 	defer client.Rollback()
 	var phone string
-	checkuserexist := client.QueryRow(`SELECT dial FROM Users WHERE username = $1 AND user_id = $2 AND user_type = $3`, Username, UserId, UserRole).Scan(phone)
+	checkuserexist := client.QueryRow(`SELECT dial FROM users WHERE fullname = $1 AND user_id = $2 AND user_type = $3`, Username, UserId, UserRole).Scan(&phone)
 	if checkuserexist != nil {
 		if checkuserexist == sql.ErrNoRows {
 			json.NewEncoder(w).Encode(Response{
@@ -98,8 +104,16 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+		// fmt.Println("Error checking user existence:", checkuserexist)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal serverError",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	var bkreq BKpayload
+
 	err := json.NewDecoder(r.Body).Decode(&bkreq)
 	if err != nil {
 		json.NewEncoder(w).Encode(Response{
@@ -109,102 +123,173 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Something went wrong: %v", err)
 		return
 	}
+	fmt.Println(bkreq.Dayofweek)
+	fmt.Println(UserId)
+	fmt.Println(Username)
 	daynumber, err := sidefunc_test.DayOfWeekReverse(bkreq.Dayofweek)
 	if err != nil {
+		fmt.Println("Error converting dayofweek:", err)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalidpayload",
 			Success: false,
 		})
 		return
 	}
+
 	if bkreq.ForMe {
+		fmt.Println("Processing ForMe booking...")
 		isExist, errorfunc := sidefunc_test.CheckalreadybookedToday(UserId, bkreq.Date, client)
 		if errorfunc != nil {
+			fmt.Println("Error checking if already booked:", errorfunc)
 			json.NewEncoder(w).Encode(Response{
 				Message: "Internal serverError",
 				Success: false,
 			})
-			fmt.Println("something went wrong", errorfunc)
 			return
 		}
-		if isExist {
-			_, errbk := client.Exec(`INSERT INTO bookingTrack_tb (user_id, doctor_id, service_id, booking_date,dayofweek,start_time,end_time, status)`, UserId, bkreq.DoctorID, bkreq.ServiceID, bkreq.Date, daynumber, bkreq.StartTime, bkreq.EndTime, "completed")
+		fmt.Println("Is already booked:", isExist)
+		if !isExist {
+			fmt.Println("Inserting booking for user...")
+			fmt.Println("DoctorID being inserted:", bkreq.DoctorID)
+			fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
+			fmt.Println("UserId being inserted:", UserId)
+
+			// Convert string to int for doctor_id
+			doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
+			if err != nil {
+				fmt.Println("Error converting doctor_id to int:", err)
+				json.NewEncoder(w).Encode(Response{
+					Message: "Invalid doctor ID",
+					Success: false,
+				})
+				return
+			}
+
+			// Convert string to int for service_id
+			serviceIDInt, err := strconv.Atoi(bkreq.ServiceID)
+			if err != nil {
+				fmt.Println("Error converting service_id to int:", err)
+				json.NewEncoder(w).Encode(Response{
+					Message: "Invalid service ID",
+					Success: false,
+				})
+				return
+			}
+
+			_, errbk := client.Exec(`INSERT INTO bookingtrack_tb (user_id, doctor_id, service_id, booking_date, dayofweek, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, UserId, doctorIDInt, serviceIDInt, bkreq.Date, daynumber, bkreq.StartTime, bkreq.EndTime, "completed")
 			if errbk != nil {
+				fmt.Println("Error inserting booking:", errbk)
 				json.NewEncoder(w).Encode(Response{
 					Message: "Internal serverError",
 					Success: false,
 				})
-				fmt.Println("something went wrong", errbk)
 				return
 			}
+			fmt.Println("Booking inserted successfully")
 			errsms := smsendpoint.SmsEndpoint(Username, phone, bkreq.StartTime, bkreq.EndTime)
 			if errsms != nil {
+				fmt.Println("Error sending SMS:", errsms)
 				json.NewEncoder(w).Encode(Response{
 					Message: "Internal ServerError",
 					Success: false,
 				})
-				fmt.Println("Something went wrong", errsms)
 				return
 			}
+		} else {
+			json.NewEncoder(w).Encode(Response{
+				Message: "You already have a booking for today",
+				Success: false,
+			})
+			return
 		}
 
 	} else if !bkreq.ForMe {
+		fmt.Println("Processing ForSomeoneElse booking...")
 		var hashedsecretkey string
 		var spec_id string
-		errRow := client.QueryRow(`SELECT secretkey FROM Specialgroup WHERE Username = $1 AND manageby_id = $2`, bkreq.Specname, UserId).Scan(&hashedsecretkey, &spec_id)
+		errRow := client.QueryRow(`SELECT secretkey, spec_id FROM specialgroup WHERE Username = $1 AND managedby_id = $2`, bkreq.Specname, UserId).Scan(&hashedsecretkey, &spec_id)
 		if errRow != nil {
-			if err == sql.ErrNoRows {
-				fmt.Println("no such special-group entry for user", err)
+			if errRow == sql.ErrNoRows {
+				fmt.Println("no such special-group entry for user", errRow)
 				json.NewEncoder(w).Encode(Response{
 					Message: "Invalid payload",
 					Success: false,
 				})
 				return
 			}
+			fmt.Println("Error querying special group:", errRow)
 			json.NewEncoder(w).Encode(Response{
 				Message: "Internal serverError",
 				Success: false,
 			})
-			fmt.Println("failed to return row", errRow)
 			return
 		}
 		errcomparedhash := bcrypt.CompareHashAndPassword([]byte(hashedsecretkey), []byte(bkreq.Speckey))
 		if errcomparedhash != nil {
+			fmt.Println("Error comparing hash:", errcomparedhash)
 			json.NewEncoder(w).Encode(Response{
 				Message: "Invalid payload or Internal serverError try again",
 				Success: false,
 			})
-			fmt.Println("something went wrong ", errcomparedhash)
 			return
 		}
-		_, errexec := client.Exec(`INSERT INTO bookingTrack_tb (user_id, spec_id , doctor_id, service_id, booking_date, dayofweek, start_time, end_time, status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, UserId, spec_id, bkreq.DoctorID, bkreq.ServiceID, bkreq.Date, bkreq.StartTime, bkreq.EndTime, "completed")
+		fmt.Println("Inserting booking for someone else...")
+		fmt.Println("DoctorID being inserted:", bkreq.DoctorID)
+		fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
+
+		// Convert string to int for doctor_id
+		doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
+		if err != nil {
+			fmt.Println("Error converting doctor_id to int:", err)
+			json.NewEncoder(w).Encode(Response{
+				Message: "Invalid doctor ID",
+				Success: false,
+			})
+			return
+		}
+
+		// Convert string to int for service_id
+		serviceIDInt, err := strconv.Atoi(bkreq.ServiceID)
+		if err != nil {
+			fmt.Println("Error converting service_id to int:", err)
+			json.NewEncoder(w).Encode(Response{
+				Message: "Invalid service ID",
+				Success: false,
+			})
+			return
+		}
+
+		_, errexec := client.Exec(`INSERT INTO bookingtrack_tb (user_id, spec_id, doctor_id, service_id, booking_date, dayofweek, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, UserId, spec_id, doctorIDInt, serviceIDInt, bkreq.Date, daynumber, bkreq.StartTime, bkreq.EndTime, "completed")
 		if errexec != nil {
+			fmt.Println("Error inserting booking for someone else:", errexec)
 			json.NewEncoder(w).Encode(Response{
 				Message: "Internal ServerError",
 				Success: false,
 			})
-			fmt.Println("something went wrong failed to execute query", errexec)
+			return
 		}
 		errsms := smsendpoint.SmsEndpoint(bkreq.Specname, phone, bkreq.StartTime, bkreq.EndTime)
 		if errsms != nil {
+			fmt.Println("Error sending SMS for someone else:", errsms)
 			json.NewEncoder(w).Encode(Response{
 				Message: "InternetError",
 				Success: false,
 			})
-			fmt.Println("failed to send sms", errsms)
 			return
 		}
 
 	}
+	fmt.Println("Committing transaction...")
 	if err := client.Commit(); err != nil {
+		fmt.Println("Error committing transaction:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
 		return
 	}
+	fmt.Println("Transaction committed successfully")
 
-	// After successful booking, insert into scheduled_notifications
 	var bookingID int
-	err = client.QueryRow(`SELECT id FROM bookingtrack_tb WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, UserId).Scan(&bookingID)
+	err = handlerconn.Db.QueryRow(`SELECT id FROM bookingtrack_tb WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, UserId).Scan(&bookingID)
 	if err == nil {
 		_, errNotif := handlerconn.Db.Exec(`INSERT INTO scheduled_notifications (booking_id, status) VALUES ($1, 'pending')`, bookingID)
 		if errNotif != nil {
@@ -373,7 +458,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	fmt.Println(results)
+
 	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
