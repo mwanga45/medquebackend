@@ -28,24 +28,23 @@ import (
 )
 
 func main() {
-	// Load .env file
+	
 	envPath := ".env"
 	if err := godotenv.Load(envPath); err != nil {
 		log.Printf("Warning: .env file not found at %s or failed to load: %v", envPath, err)
 	}
 
-	// Create context and signal channel
+	
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Initialize database connection first
+	
 	if err := handlerconn.Connectionpool(); err != nil {
 		log.Fatalf("something went wrong failed to connect to database %v", err)
 	}
 
-	// Start notification worker
 	go booking.StartNotificationWorker(ctx)
 
 	// Set up router and routes
@@ -65,7 +64,7 @@ func main() {
 		Handler: cors(r),
 	}
 
-	// Start server in a goroutine
+	
 	go func() {
 		fmt.Println("Server listening on port 8801...")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
