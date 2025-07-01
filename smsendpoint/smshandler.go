@@ -44,7 +44,7 @@ func SmsEndpoint(username, phone, startAt, endAt string) error {
 	message := fmt.Sprintf("%s, you're expected at the hospital 10 minutes before your appointment. Start: %s, End: %s", username, startAt, endAt)
 
 	payload := Payload{
-		SenderID: 45,
+		SenderID: 1,
 		Schedule: "none",
 		Sms:      message,
 		Recipients: []Receiver{{
