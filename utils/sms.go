@@ -1,37 +1,56 @@
 package utils
 
 import (
-	"log"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"medquemod/types"
 	"net/http"
-	"net/url"
 	"os"
 )
 
-func SendSms(to string, message string) error {
+func SendSms(payload types.SmsPayload) error {
 	apiKey := os.Getenv("SMS_APIKEY")
-	baseURL := os.Getenv("BASEURL")
+	baseURL := os.Getenv("BASEURL")+ "/send-sms"
+	if apiKey == "" {
+		return fmt.Errorf("SMS_APIKEY environment variable is not set")
+	}
 
-	// Construct the API endpoint
-	endpoint := baseURL + "/send"
+	if baseURL == "" {
+		return fmt.Errorf("BASEURL environment variable is not set")
+	}
 
-	// Create the request payload
-	data := url.Values{}
-	data.Set("to", to)
-	data.Set("message", message)
-
-	// Make the HTTP POST request
-	resp, err := http.PostForm(endpoint, data)
+	
+	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Error sending SMS: %v", err)
-		return err
+		return fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", baseURL, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Failed to send SMS: %s", resp.Status)
-		return err
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	log.Println("SMS sent successfully")
+	fmt.Printf("Status: %s\nResponse: %s\n", resp.Status, string(respBody))
+
 	return nil
+
 }
