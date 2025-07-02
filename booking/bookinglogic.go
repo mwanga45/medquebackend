@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	sidefunc_test "medquemod/booking/verification"
@@ -104,7 +105,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		// fmt.Println("Error checking user existence:", checkuserexist)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal serverError",
 			Success: false,
@@ -154,7 +154,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
 			fmt.Println("UserId being inserted:", UserId)
 
-			// Convert string to int for doctor_id
+			
 			doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
 			if err != nil {
 				fmt.Println("Error converting doctor_id to int:", err)
@@ -165,7 +165,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// Convert string to int for service_id
 			serviceIDInt, err := strconv.Atoi(bkreq.ServiceID)
 			if err != nil {
 				fmt.Println("Error converting service_id to int:", err)
@@ -186,7 +185,8 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			fmt.Println("Booking inserted successfully")
-			errsms := smsendpoint.SmsEndpoint(Username, phone, bkreq.StartTime, bkreq.EndTime)
+			phone_number := strings.Replace(phone, "+","",-1)
+			errsms := smsendpoint.SmsEndpoint(Username, phone_number, bkreq.StartTime, bkreq.EndTime)
 			if errsms != nil {
 				fmt.Println("Error sending SMS:", errsms)
 				json.NewEncoder(w).Encode(Response{
@@ -237,7 +237,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("DoctorID being inserted:", bkreq.DoctorID)
 		fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
 
-		// Convert string to int for doctor_id
+
 		doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
 		if err != nil {
 			fmt.Println("Error converting doctor_id to int:", err)
@@ -248,7 +248,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Convert string to int for service_id
+	
 		serviceIDInt, err := strconv.Atoi(bkreq.ServiceID)
 		if err != nil {
 			fmt.Println("Error converting service_id to int:", err)
@@ -351,7 +351,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store schedules in memory and close rows immediately
+
 	type schedule struct {
 		docID   int
 		docName string
@@ -391,7 +391,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	var results []bkservrespond
 
-	// Process stored schedules
+
 	for _, s := range schedules {
 		dateStr, ok := allowedDates[s.dayInt]
 		if !ok {
@@ -423,7 +423,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			// Check slot availability in separate query
+
 			var status string
 			err := tx.QueryRow(`
 				SELECT status

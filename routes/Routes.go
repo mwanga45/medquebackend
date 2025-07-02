@@ -26,7 +26,6 @@ func HandleRoutes(r *mux.Router) {
 	shedule := r.PathPrefix("/info").Subrouter()
 	shedule.HandleFunc("/docAv", api.DoctorsAvailability).Methods("GET")
 
-
 	// booking routers - protected with authentication middleware
 	bookingRoutes := r.PathPrefix("/booking").Subrouter()
 	bookingRoutes.Use(middleware.VerifyTokenMiddleware)
@@ -44,8 +43,9 @@ func HandleRoutes(r *mux.Router) {
 	Adm.HandleFunc("/getspecInfo", adminact.ReturnSpec).Methods("GET")
 	Adm.HandleFunc("/docAsgnServ", adminact.DocServAssign).Methods("POST")
 	Adm.HandleFunc("/DocVsServ", adminact.DocVsServ).Methods("GET")
-	Adm.HandleFunc("/login",adminact.AdminLogin).Methods("POST")
+	Adm.HandleFunc("/login", adminact.AdminLogin).Methods("POST")
 	Adm.HandleFunc("/getDocInfo", adminact.GetDoctorInfo).Methods("GET")
+	Adm.HandleFunc("/getregserv", adminact.GetsevAvailable).Methods("GET")
 
 	// ROUTES FOR THE DOCTOR
 	dkt := r.PathPrefix("/dkt").Subrouter()

@@ -42,7 +42,13 @@ type (
 		InitalNumber int     `json:"initial_number"`
 		Fee          float64 `json:"fee"`
 	}
-
+	Service struct {
+		ID              int     `json:"id"`
+		Servicename     string  `json:"servicename"`
+		ConsultationFee float64 `json:"consultationFee"`
+		CreatedAt       string  `json:"created_at"`
+		DurationMin     int     `json:"duration_minutes"`
+	}
 	Response struct {
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
@@ -159,7 +165,6 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate required fields
 	if adminLogin.Username == "" || adminLogin.Password == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{
@@ -704,11 +709,74 @@ func GetDoctorInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
 		Message: "Doctor information retrieved successfully",
 		Success: true,
 		Data:    doctors,
+	})
+}
+
+func GetsevAvailable(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Method not allowed",
+			Success: false,
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	rows, err := handlerconn.Db.Query("SELECT serv_id, servicename, duration_minutes, fee, created_at FROM  serviceAvailable")
+	if err != nil {
+		log.Printf("Database query error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Server Error: Failed to fetch data",
+			Success: false,
+		})
+		return
+	}
+	defer rows.Close()
+
+	var services []Service
+
+	for rows.Next() {
+		var service Service
+		err := rows.Scan(
+			&service.ID,
+			&service.Servicename,
+			&service.DurationMin,
+			&service.ConsultationFee,
+			&service.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Row scanning error: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(Response{
+				Message: "Server Error: Failed to process data",
+				Success: false,
+			})
+			return
+		}
+		services = append(services, service)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Row iteration error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Server Error: Data processing failed",
+			Success: false,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfully returned data",
+		Success: true,
+		Data:    services,
 	})
 }

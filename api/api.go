@@ -269,7 +269,7 @@ func Userdetails(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// RETURN ALL  THE SERVICE AVALAIBLE
+
 func GetService(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)

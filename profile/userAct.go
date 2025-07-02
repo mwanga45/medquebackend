@@ -105,6 +105,7 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 	}
 	hashsecretkey,_ := bcrypt.GenerateFromPassword([]byte(reqpayload.Secretkey), bcrypt.DefaultCost)
 	var newspecId int
+	
 	InsertError := client.QueryRow(`INSERT INTO Specialgroup (Username,secretkey, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6) RETURNING spec_id`, Username, hashsecretkey, reqpayload.Age, Phone, reqpayload.Dial, reqpayload.Reason).Scan(&newspecId)
 
 	if InsertError != nil {
