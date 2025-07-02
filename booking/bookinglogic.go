@@ -104,7 +104,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		// fmt.Println("Error checking user existence:", checkuserexist)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal serverError",
 			Success: false,
@@ -154,7 +153,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
 			fmt.Println("UserId being inserted:", UserId)
 
-			// Convert string to int for doctor_id
+			
 			doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
 			if err != nil {
 				fmt.Println("Error converting doctor_id to int:", err)
@@ -165,7 +164,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// Convert string to int for service_id
 			serviceIDInt, err := strconv.Atoi(bkreq.ServiceID)
 			if err != nil {
 				fmt.Println("Error converting service_id to int:", err)
@@ -248,7 +246,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Convert string to int for service_id
+	
 		serviceIDInt, err := strconv.Atoi(bkreq.ServiceID)
 		if err != nil {
 			fmt.Println("Error converting service_id to int:", err)
