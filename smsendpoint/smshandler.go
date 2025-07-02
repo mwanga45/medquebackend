@@ -1,13 +1,9 @@
 package smsendpoint
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"medquemod/types"
 	"medquemod/utils"
-	"net/http"
 	"os"
 )
 
