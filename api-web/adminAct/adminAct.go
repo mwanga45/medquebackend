@@ -49,7 +49,6 @@ type (
 		CreatedAt       string  `json:"created_at"`
 		DurationMin     int     `json:"duration_minutes"`
 	}
-
 	Response struct {
 		Message string      `json:"message"`
 		Success bool        `json:"success"`
@@ -165,7 +164,6 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
 
 	if adminLogin.Username == "" || adminLogin.Password == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -711,7 +709,6 @@ func GetDoctorInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
 		Message: "Doctor information retrieved successfully",
@@ -719,7 +716,6 @@ func GetDoctorInfo(w http.ResponseWriter, r *http.Request) {
 		Data:    doctors,
 	})
 }
-
 
 func GetsevAvailable(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

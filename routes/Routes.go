@@ -9,12 +9,11 @@ import (
 	authentic "medquemod/handleauthentic"
 	"medquemod/middleware"
 	"medquemod/profile"
-	"medquemod/smsendpoint"
 
 	"github.com/gorilla/mux"
 )
 
-func HandleRoutes(r *mux.Router) { 
+func HandleRoutes(r *mux.Router) {
 
 	auth := r.PathPrefix("/auth").Subrouter() //subrouter for the authentication
 
@@ -56,6 +55,4 @@ func HandleRoutes(r *mux.Router) {
 	userAct.Use(middleware.VerifyTokenMiddleware) // Protect user routes with authentication
 	userAct.HandleFunc("/assignspec", profile.UserAct).Methods("POST")
 
-	// SMS endpoint route
-	r.HandleFunc("/sms/send", smsendpoint.SendSMSHandler).Methods("POST")
 }
