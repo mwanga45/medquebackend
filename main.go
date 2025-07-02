@@ -31,7 +31,7 @@ func main() {
 	
 	envPath := ".env"
 	if err := godotenv.Load(envPath); err != nil {
-		log.Printf("Warning: .env file not found at %s or failed to load: %v", envPath, err)
+		log.Fatalf("Fatal: .env file not found at %s or failed to load: %v", envPath, err)
 	}
 
 	
