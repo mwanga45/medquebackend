@@ -54,5 +54,6 @@ func HandleRoutes(r *mux.Router) {
 	userAct := r.PathPrefix("/user").Subrouter()
 	userAct.Use(middleware.VerifyTokenMiddleware) // Protect user routes with authentication
 	userAct.HandleFunc("/assignspec", profile.UserAct).Methods("POST")
+	userAct.HandleFunc("/bookinghistory", profile.BookingHistory).Methods("GET")
 
 }
