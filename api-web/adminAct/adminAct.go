@@ -346,7 +346,7 @@ func AssignService(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func Asdocshedule(w http.ResponseWriter, r *http.Request) {
+func Asdocschedule(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
