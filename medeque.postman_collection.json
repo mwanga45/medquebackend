@@ -1,0 +1,567 @@
+{
+	"info": {
+		"_postman_id": "d0cb00c5-04df-4e18-a293-f0486434009a",
+		"name": "medeque",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30951856"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"secretekey\": \"yourpassword\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"John\",\n    \"secondname\": \"Doe\",\n    \"secretekey\": \"yourpassword\",\n    \"dial\": \"+1234567890\",\n    \"email\": \"john.doe@example.com\",\n    \"deviceId\": \"some-device-id\",\n    \"birthdate\": \"2000-01-01\",\n    \"homeaddress\": \"123 Main St\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Chatbot",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userInput\": \"What are the symptoms of a common cold?\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/chatbot",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"chatbot"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Doctor Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"regNo\": \"DOC12345\",\n  \"password\": \"docpassword\",\n  \"username\": \"Dr. Smith\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/dklogin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"dklogin"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Info",
+			"item": [
+				{
+					"name": "Doctors Availability",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/info/docAv",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"info",
+								"docAv"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Booking",
+			"item": [
+				{
+					"name": "Get Service",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/booking/getservice",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"booking",
+								"getservice"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Service Slot",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"servid\": 1,\n  \"timeInter\": 30,\n  \"servicename\": \"General Consultation\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/booking/serviceslot",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"booking",
+								"serviceslot"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Booking Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"doctorId\": \"1\",\n  \"serviceId\": \"1\",\n  \"start_time\": \"10:00:00\",\n  \"end_time\": \"10:30:00\",\n  \"date\": \"2024-01-01\",\n  \"dayofweek\": \"Monday\",\n  \"forme\": true,\n  \"specname\": \"\",\n  \"speckey\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/booking/bookingreq",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"booking",
+								"bookingreq"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Admin Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/adim/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Service",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"servname\": \"Dental Checkup\",\n  \"duration_time\": 45,\n  \"fee\": 75.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/adim/registerserv",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"registerserv"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Non-Interval Service",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"servname\": \"Vaccination\",\n  \"initial_number\": 100,\n  \"fee\": 50.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/adim/regiNonIntervalserv",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"regiNonIntervalserv"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Doctor Schedule",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"doctor_id\": \"1\",\n  \"day_of_week\": \"Monday\",\n  \"start_time\": \"09:00:00\",\n  \"end_time\": \"17:00:00\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/adim/docshedule",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"docshedule"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Specialist",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"specialist\": \"Cardiologist\",\n  \"description\": \"Heart specialist\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/adim/regspecilist",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"regspecilist"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specialist Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/adim/getspecInfo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"getspecInfo"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Doctor to Service",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"doctor_id\": \"1\",\n  \"serviceid\": \"1\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/adim/docAsgnServ",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"docAsgnServ"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Doctor vs Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/adim/DocVsServ",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"DocVsServ"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Doctor Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/adim/getDocInfo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"getDocInfo"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Registered Services",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/adim/getregserv",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"adim",
+								"getregserv"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Doctor",
+			"item": [
+				{
+					"name": "Register Doctor",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"Dr. Smith\",\n  \"regNo\": \"DOC12345\",\n  \"password\": \"docpassword\",\n  \"confirmpwrd\": \"docpassword\",\n  \"specialist\": \"Cardiology\",\n  \"phone\": \"+1987654321\",\n  \"email\": \"dr.smith@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/dkt/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dkt",
+								"register"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Assign Specialist for another person",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"age\": 30,\n  \"firstname\": \"Jane\",\n  \"Secondname\": \"Doe\",\n  \"dial\": \"+1122334455\",\n  \"secretkey\": \"janepassword\",\n  \"reason\": \"Booking for a family member\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user/assignspec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"user",
+								"assignspec"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "default"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
