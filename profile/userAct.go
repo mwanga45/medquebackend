@@ -22,6 +22,7 @@ type (
 	Historyforme struct {
 		UserId   int    `json:"user_id"`
 		Service_id int	`json:"service_id"`
+		Spec_id int    `json:"spec_id"`
 		DayofWeek int `json:"dayofweek"`
 		StartTime string `json:"starttime"`
 		EndTime   string `json:"endtime"`
@@ -91,8 +92,49 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	var history Historyforme
     json.NewDecoder(r.Body).Decode(&history)
-	
+rows, err := client.Query(`SELECT user_id, spec_id, service_id, dayofweek, starttime, endtime, bookingdate FROM Bookingtrack_tb WHERE user_id = $1 AND spec_id = $2 AND service_id = $3`, claims.ID, history.Spec_id, history.Service_id)
+if err != nil {
+	json.NewEncoder(w).Encode(Response{
+		Message: "Internal Server Error",
+		Success: false,
+	})
+	return
+}
+defer rows.Close()
 
+historyList := make([]Historyforme, 0)
+for rows.Next() {
+	var h Historyforme
+	err := rows.Scan(&h.UserId, &h.Spec_id, &h.Service_id, &h.DayofWeek, &h.StartTime, &h.EndTime, &h.BookingDate)
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Error scanning row",
+			Success: false,
+		})
+		return
+	}
+	historyList = append(historyList, h)
+}
+if errCommit := client.Commit(); errCommit != nil {
+	json.NewEncoder(w).Encode(Response{	
+		Message: "Internal ServerError",
+		Success: false,	
+	})
+	fmt.Println("something went wrong", errCommit)
+	return
+}
+if errRow:= rows.Err();errRow != nil{
+	json.NewEncoder(w).Encode(Response{
+		Message: "Something went wrong",
+		Success: false,
+	})
+	return
+}
+json.NewEncoder(w).Encode(Response{
+	Message: "Booking history fetched successfully",
+	Success: true,
+	Data:    historyList,
+})
 
 }
 func UserAct(w http.ResponseWriter, r *http.Request) {
