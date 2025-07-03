@@ -32,15 +32,15 @@ type (
 		Services []ServiceInfo `json:"services"`
 	}
 
-	ServAssignpayload struct {
-		Servname    string  `json:"servname"`
-		DurationMin int     `json:"duration_time"`
+	ServiceAssignPayload struct {
+		ServiceName string  `json:"serviceName"`
+		DurationMin int     `json:"durationMin"`
 		Fee         float64 `json:"fee"`
 	}
-	ServAssignpayload2 struct {
-		Servname     string  `json:"servname"`
-		InitalNumber int     `json:"initial_number"`
-		Fee          float64 `json:"fee"`
+	ServiceAssignPayload2 struct {
+		ServiceName   string  `json:"serviceName"`
+		InitialNumber int     `json:"initialNumber"`
+		Fee           float64 `json:"fee"`
 	}
 	Service struct {
 		ID              int     `json:"id"`
@@ -54,11 +54,11 @@ type (
 		Success bool        `json:"success"`
 		Data    interface{} `json:"data,omitempty"`
 	}
-	Asdocshedulepayload struct {
-		DoctorID  string `json:"doctor_id" validate:"required"`
-		Dayofweek string `json:"day_of_week" validate:"required"`
-		StartTime string `json:"start_time" validate:"required"`
-		EndTime   string `json:"end_time" validate:"required"`
+	AsdocschedulePayload struct {
+		DoctorID  string `json:"doctorId" validate:"required"`
+		DayOfWeek string `json:"dayOfWeek" validate:"required"`
+		StartTime string `json:"startTime" validate:"required"`
+		EndTime   string `json:"endTime" validate:"required"`
 	}
 	AsdocServ struct {
 		DoctorID  string `json:"docID"`
@@ -236,7 +236,7 @@ func AssignNonTimeserv(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[AssignNonTimeserv] raw JSON: %s\n", string(body))
 
 	// --- 2) Decode into your struct ---
-	var req ServAssignpayload2
+	var req ServiceAssignPayload2
 	if err := json.Unmarshal(body, &req); err != nil {
 		log.Printf("[AssignNonTimeserv] JSON decode error: %v\n", err)
 		http.Error(w, `{"message":"Bad JSON","success":false}`, http.StatusBadRequest)
@@ -245,12 +245,12 @@ func AssignNonTimeserv(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[AssignNonTimeserv] decoded struct: %+v\n", req)
 
 	// --- 3) Check for missing/invalid fields yourself ---
-	if strings.TrimSpace(req.Servname) == "" {
+	if strings.TrimSpace(req.ServiceName) == "" {
 		log.Println("[AssignNonTimeserv] validation error: servname empty")
 		http.Error(w, `{"message":"Service name required","success":false}`, http.StatusBadRequest)
 		return
 	}
-	if req.InitalNumber <= 0 {
+	if req.InitialNumber <= 0 {
 		log.Println("[AssignNonTimeserv] validation error: initial_number <= 0")
 		http.Error(w, `{"message":"Initial number must >0","success":false}`, http.StatusBadRequest)
 		return
@@ -263,25 +263,25 @@ func AssignNonTimeserv(w http.ResponseWriter, r *http.Request) {
 
 	// --- 4) Check existence and insert ---
 	var existing string
-	err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable_tb WHERE servicename=$1`, req.Servname).Scan(&existing)
+	err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable_tb WHERE servicename=$1`, req.ServiceName).Scan(&existing)
 
 	switch {
 	case err == sql.ErrNoRows:
 		// does not exist → try insert
 		if _, err := handlerconn.Db.Exec(
 			`INSERT INTO serviceavailable_tb (servicename, initial_number, fee) VALUES ($1,$2,$3)`,
-			req.Servname, req.InitalNumber, req.Fee,
+			req.ServiceName, req.InitialNumber, req.Fee,
 		); err != nil {
 			log.Printf("[AssignNonTimeserv] DB insert error: %v\n", err)
 			http.Error(w, `{"message":"Internal server error: `+err.Error()+`","success":false}`, http.StatusInternalServerError)
 			return
 		}
-		log.Printf("[AssignNonTimeserv] inserted: %q\n", req.Servname)
+		log.Printf("[AssignNonTimeserv] inserted: %q\n", req.ServiceName)
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(Response{
 			Message: "Non-time service created",
 			Success: true,
-			Data:    req.Servname,
+			Data:    req.ServiceName,
 		})
 		return
 
@@ -314,13 +314,13 @@ func AssignService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	var Assreq ServAssignpayload
+	var Assreq ServiceAssignPayload
 	json.NewDecoder(r.Body).Decode(&Assreq)
 	var servname string
-	checkifexisterr := handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE servicename = $1`, Assreq.Servname).Scan(&servname)
+	checkifexisterr := handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE servicename = $1`, Assreq.ServiceName).Scan(&servname)
 	if checkifexisterr != nil {
 		if checkifexisterr == sql.ErrNoRows {
-			_, queryerr := handlerconn.Db.Exec(`INSERT INTO serviceavailable (servicename,duration_minutes, fee) VALUES($1,$2,$3)`, Assreq.Servname, Assreq.DurationMin, Assreq.Fee)
+			_, queryerr := handlerconn.Db.Exec(`INSERT INTO serviceavailable (servicename,duration_minutes, fee) VALUES($1,$2,$3)`, Assreq.ServiceName, Assreq.DurationMin, Assreq.Fee)
 			if queryerr != nil {
 				json.NewEncoder(w).Encode(Response{
 					Message: "Internal serverError: " + queryerr.Error(),
@@ -341,12 +341,12 @@ func AssignService(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{
 		Message: "Servecename is already exist",
 		Success: false,
-		Data:    Assreq.Servname,
+		Data:    Assreq.ServiceName,
 	})
 
 }
 
-func Asdocshedule(w http.ResponseWriter, r *http.Request) {
+func Asdocschedule(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{
@@ -356,7 +356,7 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	var shereq Asdocshedulepayload
+	var shereq AsdocschedulePayload
 
 	json.NewDecoder(r.Body).Decode(&shereq)
 	var isExist bool
@@ -377,7 +377,7 @@ func Asdocshedule(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	_, errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time) VALUES($1,$2,$3,$4)`, shereq.DoctorID, shereq.Dayofweek, shereq.StartTime, shereq.EndTime)
+	_, errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time) VALUES($1,$2,$3,$4)`, shereq.DoctorID, shereq.DayOfWeek, shereq.StartTime, shereq.EndTime)
 	if errexec != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
