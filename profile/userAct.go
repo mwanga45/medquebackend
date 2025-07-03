@@ -19,6 +19,20 @@ type (
 		Erroruser string      `json:"error"`
 		Data      interface{} `json:"data,omitempty"`
 	}
+	Historyforme struct {
+		UserId   int    `json:"user_id"`
+		Service_id int	`json:"service_id"`
+		DayofWeek int `json:"dayofweek"`
+		StartTime string `json:"starttime"`
+		EndTime   string `json:"endtime"`
+		BookingDate string `json:"bookingdate"`
+	}
+	HistoryNotforme struct {
+		UserId   int    `json:"user_id"`
+		Spec_id int    `json:"spec_id"`
+		Service_id int	`json:"service_id"`
+		DayofWeek int `json:"dayofweek"`
+	}
 	Createpayload struct {
 		Age        int    `json:"age"`
 		Firstname  string `json:"firstname"`
@@ -29,6 +43,58 @@ type (
 	}
 )
 
+func BookingHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid payload",
+			Success: false,
+		})
+		return
+
+	}
+	w.Header().Set("Content-Type", "application/json")
+	client, errTx := handlerconn.Db.Begin()
+	if errTx != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal ServerError",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer client.Rollback()
+	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)	
+	if !ok 	{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Unauthorized",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	var isExist bool
+	errcheckId := client.QueryRow(`SELECT EXISTS(SELECT 1 FROM Users WHERE user_id = $1)`, claims.ID).Scan(&isExist)
+	if errcheckId != nil {
+		if errcheckId == sql.ErrNoRows {
+			json.NewEncoder(w).Encode(Response{
+				Message: "User doesn`t exist ",
+				Success: false,
+				Data:   nil,
+			})
+			return
+		}
+    json.NewEncoder(w).Encode(Response{
+		Message: "Internal Server Error",
+		Success: false,
+	})
+	return
+	}
+	var history Historyforme
+    json.NewDecoder(r.Body).Decode(&history)
+	
+
+
+}
 func UserAct(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		json.NewEncoder(w).Encode(Response{
@@ -103,9 +169,9 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	hashsecretkey,_ := bcrypt.GenerateFromPassword([]byte(reqpayload.Secretkey), bcrypt.DefaultCost)
+	hashsecretkey, _ := bcrypt.GenerateFromPassword([]byte(reqpayload.Secretkey), bcrypt.DefaultCost)
 	var newspecId int
-	
+
 	InsertError := client.QueryRow(`INSERT INTO Specialgroup (Username,secretkey, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6) RETURNING spec_id`, Username, hashsecretkey, reqpayload.Age, Phone, reqpayload.Dial, reqpayload.Reason).Scan(&newspecId)
 
 	if InsertError != nil {
