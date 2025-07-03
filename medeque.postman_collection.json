@@ -21,7 +21,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"user@example.com\",\n  \"secretekey\": \"yourpassword\"\n}"
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"secretKey\": \"yourpassword\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/auth/login",
@@ -49,7 +49,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"firstname\": \"John\",\n    \"secondname\": \"Doe\",\n    \"secretekey\": \"yourpassword\",\n    \"dial\": \"+1234567890\",\n    \"email\": \"john.doe@example.com\",\n    \"deviceId\": \"some-device-id\",\n    \"birthdate\": \"2000-01-01\",\n    \"homeaddress\": \"123 Main St\"\n}"
+							"raw": "{\n    \"firstName\": \"John\",\n    \"secondName\": \"Doe\",\n    \"secretKey\": \"yourpassword\",\n    \"dial\": \"+1234567890\",\n    \"email\": \"john.doe@example.com\",\n    \"deviceId\": \"some-device-id\",\n    \"birthdate\": \"2000-01-01\",\n    \"homeAddress\": \"123 Main St\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/auth/register",
@@ -186,7 +186,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"servid\": 1,\n  \"timeInter\": 30,\n  \"servicename\": \"General Consultation\"\n}"
+							"raw": "{\n  \"serviceId\": 1,\n  \"durationMin\": 30,\n  \"serviceName\": \"General Consultation\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/booking/serviceslot",
@@ -217,7 +217,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"doctorId\": \"1\",\n  \"serviceId\": \"1\",\n  \"start_time\": \"10:00:00\",\n  \"end_time\": \"10:30:00\",\n  \"date\": \"2024-01-01\",\n  \"dayofweek\": \"Monday\",\n  \"forme\": true,\n  \"specname\": \"\",\n  \"speckey\": \"\"\n}"
+							"raw": "{\n  \"doctorId\": \"1\",\n  \"serviceId\": \"1\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"10:30:00\",\n  \"date\": \"2024-01-01\",\n  \"dayOfWeek\": \"Monday\",\n  \"forme\": true,\n  \"specName\": \"\",\n  \"specKey\": \"\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/booking/bookingreq",
@@ -252,12 +252,12 @@
 							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/adim/login",
+							"raw": "{{base_url}}/admin/login",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
+								"admin",
 								"login"
 							]
 						}
@@ -276,15 +276,15 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"servname\": \"Dental Checkup\",\n  \"duration_time\": 45,\n  \"fee\": 75.0\n}"
+							"raw": "{\n  \"serviceName\": \"Dental Checkup\",\n  \"durationMin\": 45,\n  \"fee\": 75.0\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/adim/registerserv",
+							"raw": "{{base_url}}/admin/registerserv",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
+								"admin",
 								"registerserv"
 							]
 						}
@@ -303,15 +303,15 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"servname\": \"Vaccination\",\n  \"initial_number\": 100,\n  \"fee\": 50.0\n}"
+							"raw": "{\n  \"serviceName\": \"Vaccination\",\n  \"initialNumber\": 100,\n  \"fee\": 50.0\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/adim/regiNonIntervalserv",
+							"raw": "{{base_url}}/admin/regiNonIntervalserv",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
+								"admin",
 								"regiNonIntervalserv"
 							]
 						}
@@ -330,16 +330,16 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"doctor_id\": \"1\",\n  \"day_of_week\": \"Monday\",\n  \"start_time\": \"09:00:00\",\n  \"end_time\": \"17:00:00\"\n}"
+							"raw": "{\n  \"doctorId\": \"1\",\n  \"dayOfWeek\": \"Monday\",\n  \"startTime\": \"09:00:00\",\n  \"endTime\": \"17:00:00\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/adim/docshedule",
+							"raw": "{{base_url}}/admin/docschedule",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
-								"docshedule"
+								"admin",
+								"docschedule"
 							]
 						}
 					},
@@ -360,13 +360,13 @@
 							"raw": "{\n  \"specialist\": \"Cardiologist\",\n  \"description\": \"Heart specialist\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/adim/regspecilist",
+							"raw": "{{base_url}}/admin/regspecialist",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
-								"regspecilist"
+								"admin",
+								"regspecialist"
 							]
 						}
 					},
@@ -378,12 +378,12 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/adim/getspecInfo",
+							"raw": "{{base_url}}/admin/getspecInfo",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
+								"admin",
 								"getspecInfo"
 							]
 						}
@@ -402,15 +402,15 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"doctor_id\": \"1\",\n  \"serviceid\": \"1\"\n}"
+							"raw": "{\n  \"doctorId\": \"1\",\n  \"serviceId\": \"1\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/adim/docAsgnServ",
+							"raw": "{{base_url}}/admin/docAsgnServ",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
+								"admin",
 								"docAsgnServ"
 							]
 						}
@@ -423,12 +423,12 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/adim/DocVsServ",
+							"raw": "{{base_url}}/admin/DocVsServ",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
+								"admin",
 								"DocVsServ"
 							]
 						}
@@ -441,12 +441,12 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/adim/getDocInfo",
+							"raw": "{{base_url}}/admin/getDocInfo",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
+								"admin",
 								"getDocInfo"
 							]
 						}
@@ -459,12 +459,12 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/adim/getregserv",
+							"raw": "{{base_url}}/admin/getregserv",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"adim",
+								"admin",
 								"getregserv"
 							]
 						}
@@ -524,7 +524,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"age\": 30,\n  \"firstname\": \"Jane\",\n  \"Secondname\": \"Doe\",\n  \"dial\": \"+1122334455\",\n  \"secretkey\": \"janepassword\",\n  \"reason\": \"Booking for a family member\"\n}"
+							"raw": "{\n  \"age\": 30,\n  \"firstName\": \"Jane\",\n  \"secondName\": \"Doe\",\n  \"dial\": \"+1122334455\",\n  \"secretKey\": \"janepassword\",\n  \"reason\": \"Booking for a family member\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/user/assignspec",

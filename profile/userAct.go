@@ -20,13 +20,13 @@ type (
 		Data      interface{} `json:"data,omitempty"`
 	}
 	Historyforme struct {
-		UserId   int    `json:"user_id"`
-		Service_id int	`json:"service_id"`
-		Spec_id int    `json:"spec_id"`
-		DayofWeek int `json:"dayofweek"`
-		StartTime string `json:"starttime"`
-		EndTime   string `json:"endtime"`
-		BookingDate string `json:"bookingdate"`
+		UserId      int    `json:"userId"`
+		ServiceId   int    `json:"serviceId"`
+		SpecId      int    `json:"specId"`
+		DayOfWeek   int    `json:"dayOfWeek"`
+		StartTime   string `json:"startTime"`
+		EndTime     string `json:"endTime"`
+		BookingDate string `json:"bookingDate"`
 	}
 	// HistoryNotforme struct {
 	// 	UserId   int    `json:"user_id"`
@@ -34,12 +34,12 @@ type (
 	// 	Service_id int	`json:"service_id"`
 	// 	DayofWeek int `json:"dayofweek"`
 	// }
-	Createpayload struct {
+	CreatePayload struct {
 		Age        int    `json:"age"`
-		Firstname  string `json:"firstname"`
-		Secondname string `json:"Secondname"`
+		FirstName  string `json:"firstName"`
+		SecondName string `json:"secondName"`
 		Dial       string `json:"dial"`
-		Secretkey  string `json:"secretkey"`
+		SecretKey  string `json:"secretKey"`
 		Reason     string `json:"reason"`
 	}
 )
@@ -64,8 +64,8 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer client.Rollback()
-	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)	
-	if !ok 	{
+	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
+	if !ok {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Unauthorized",
 			Success: false,
@@ -80,61 +80,61 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(Response{
 				Message: "User doesn`t exist ",
 				Success: false,
-				Data:   nil,
+				Data:    nil,
 			})
 			return
 		}
-    json.NewEncoder(w).Encode(Response{
-		Message: "Internal Server Error",
-		Success: false,
-	})
-	return
-	}
-	var history Historyforme
-    json.NewDecoder(r.Body).Decode(&history)
-rows, err := client.Query(`SELECT user_id, spec_id, service_id, dayofweek, starttime, endtime, bookingdate FROM Bookingtrack_tb WHERE user_id = $1 AND spec_id = $2 AND service_id = $3`, claims.ID, history.Spec_id, history.Service_id)
-if err != nil {
-	json.NewEncoder(w).Encode(Response{
-		Message: "Internal Server Error",
-		Success: false,
-	})
-	return
-}
-defer rows.Close()
-
-historyList := make([]Historyforme, 0)
-for rows.Next() {
-	var h Historyforme
-	err := rows.Scan(&h.UserId, &h.Spec_id, &h.Service_id, &h.DayofWeek, &h.StartTime, &h.EndTime, &h.BookingDate)
-	if err != nil {
 		json.NewEncoder(w).Encode(Response{
-			Message: "Error scanning row",
+			Message: "Internal Server Error",
 			Success: false,
 		})
 		return
 	}
-	historyList = append(historyList, h)
-}
-if errCommit := client.Commit(); errCommit != nil {
-	json.NewEncoder(w).Encode(Response{	
-		Message: "Internal ServerError",
-		Success: false,	
-	})
-	fmt.Println("something went wrong", errCommit)
-	return
-}
-if errRow:= rows.Err();errRow != nil{
+	var history Historyforme
+	json.NewDecoder(r.Body).Decode(&history)
+	rows, err := client.Query(`SELECT user_id, spec_id, service_id, dayofweek, starttime, endtime, bookingdate FROM Bookingtrack_tb WHERE user_id = $1 AND spec_id = $2 AND service_id = $3`, claims.ID, history.SpecId, history.ServiceId)
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server Error",
+			Success: false,
+		})
+		return
+	}
+	defer rows.Close()
+
+	historyList := make([]Historyforme, 0)
+	for rows.Next() {
+		var h Historyforme
+		err := rows.Scan(&h.UserId, &h.SpecId, &h.ServiceId, &h.DayOfWeek, &h.StartTime, &h.EndTime, &h.BookingDate)
+		if err != nil {
+			json.NewEncoder(w).Encode(Response{
+				Message: "Error scanning row",
+				Success: false,
+			})
+			return
+		}
+		historyList = append(historyList, h)
+	}
+	if errCommit := client.Commit(); errCommit != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal ServerError",
+			Success: false,
+		})
+		fmt.Println("something went wrong", errCommit)
+		return
+	}
+	if errRow := rows.Err(); errRow != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		return
+	}
 	json.NewEncoder(w).Encode(Response{
-		Message: "Something went wrong",
-		Success: false,
+		Message: "Booking history fetched successfully",
+		Success: true,
+		Data:    historyList,
 	})
-	return
-}
-json.NewEncoder(w).Encode(Response{
-	Message: "Booking history fetched successfully",
-	Success: true,
-	Data:    historyList,
-})
 
 }
 func UserAct(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +182,7 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	var reqpayload Createpayload
+	var reqpayload CreatePayload
 
 	errDec := json.NewDecoder(r.Body).Decode(&reqpayload)
 	if errDec != nil {
@@ -203,15 +203,15 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Username := fmt.Sprint(reqpayload.Firstname + " " + reqpayload.Secondname)
-	if errsecretkey := sidefunc_test.ValidateSecretkey(reqpayload.Secretkey); errsecretkey != nil {
+	Username := fmt.Sprint(reqpayload.FirstName + " " + reqpayload.SecondName)
+	if errsecretkey := sidefunc_test.ValidateSecretkey(reqpayload.SecretKey); errsecretkey != nil {
 		json.NewEncoder(w).Encode(Response{
 			Erroruser: errsecretkey.Error(),
 			Success:   false,
 		})
 		return
 	}
-	hashsecretkey, _ := bcrypt.GenerateFromPassword([]byte(reqpayload.Secretkey), bcrypt.DefaultCost)
+	hashsecretkey, _ := bcrypt.GenerateFromPassword([]byte(reqpayload.SecretKey), bcrypt.DefaultCost)
 	var newspecId int
 
 	InsertError := client.QueryRow(`INSERT INTO Specialgroup (Username,secretkey, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6) RETURNING spec_id`, Username, hashsecretkey, reqpayload.Age, Phone, reqpayload.Dial, reqpayload.Reason).Scan(&newspecId)

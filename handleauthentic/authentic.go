@@ -12,19 +12,19 @@ import (
 )
 
 type (
-	loginRequet struct {
-		Email      string `json:"email" validate:"required"`
-		Secretekey string `json:"secretekey" validate:"required"`
+	loginRequest struct {
+		Email     string `json:"email" validate:"required"`
+		SecretKey string `json:"secretKey" validate:"required"`
 	}
-	reg_request struct {
-		Firstname   string `json:"firstname" validate:"required"`
-		Secondname  string `json:"secondname" validate:"required"`
-		Secretekey  string `json:"secretekey" validate:"required"`
+	regRequest struct {
+		FirstName   string `json:"firstName" validate:"required"`
+		SecondName  string `json:"secondName" validate:"required"`
+		SecretKey   string `json:"secretKey" validate:"required"`
 		Dial        string `json:"dial" validate:"required"`
 		Email       string `json:"email" validate:"required"`
 		DeviceId    string `json:"deviceId" validate:"required"`
 		Birthdate   string `json:"birthdate" validate:"required"`
-		HomeAddress string `json:"homeaddress"`
+		HomeAddress string `json:"homeAddress"`
 	}
 	response struct {
 		Success bool   `json:"success"`
@@ -39,7 +39,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("content-type", "application/json")
-	var log loginRequet
+	var log loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&log); err != nil {
 		http.Error(w, "Invalide payload", http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response{
@@ -71,7 +71,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error in login", errcheck)
 		return
 	}
-	if comparepassword := bcrypt.CompareHashAndPassword([]byte(hashsecretekey), []byte(log.Secretekey)); comparepassword != nil {
+	if comparepassword := bcrypt.CompareHashAndPassword([]byte(hashsecretekey), []byte(log.SecretKey)); comparepassword != nil {
 		http.Error(w, "Invalid Payload", http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response{
 			Message: "Wrong password or Email",
@@ -102,14 +102,14 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req reg_request
+	var req regRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid Request payload", http.StatusBadRequest)
 		return
 	}
 
-	if req.Firstname == "" || req.Secondname == "" || req.Secretekey == "" || req.Birthdate == "" || req.DeviceId == "" || req.Dial == "" || req.Email == "" {
+	if req.FirstName == "" || req.SecondName == "" || req.SecretKey == "" || req.Birthdate == "" || req.DeviceId == "" || req.Dial == "" || req.Email == "" {
 		http.Error(w, "some empty please field all reqiure field ", http.StatusBadRequest)
 		return
 	}
@@ -126,8 +126,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	Fullname := fmt.Sprint(req.Firstname + " " + req.Secondname)
-	hashedsecretekey, err := bcrypt.GenerateFromPassword([]byte(req.Secretekey), bcrypt.DefaultCost)
+	Fullname := fmt.Sprint(req.FirstName + " " + req.SecondName)
+	hashedsecretekey, err := bcrypt.GenerateFromPassword([]byte(req.SecretKey), bcrypt.DefaultCost)
 	if err != nil {
 		json.NewEncoder(w).Encode(response{
 			Message: "failed to hashed secrete key",
