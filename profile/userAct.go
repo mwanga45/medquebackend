@@ -27,12 +27,12 @@ type (
 		EndTime   string `json:"endtime"`
 		BookingDate string `json:"bookingdate"`
 	}
-	HistoryNotforme struct {
-		UserId   int    `json:"user_id"`
-		Spec_id int    `json:"spec_id"`
-		Service_id int	`json:"service_id"`
-		DayofWeek int `json:"dayofweek"`
-	}
+	// HistoryNotforme struct {
+	// 	UserId   int    `json:"user_id"`
+	// 	Spec_id int    `json:"spec_id"`
+	// 	Service_id int	`json:"service_id"`
+	// 	DayofWeek int `json:"dayofweek"`
+	// }
 	Createpayload struct {
 		Age        int    `json:"age"`
 		Firstname  string `json:"firstname"`
