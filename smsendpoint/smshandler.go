@@ -7,24 +7,6 @@ import (
 	"os"
 )
 
-type (
-	Respond struct {
-		Message string `json:"message"`
-		Success bool   `json:"success"`
-	}
-
-	Payload struct {
-		SenderID   int        `json:"sender_id"`
-		Schedule   string     `json:"schedule"`
-		Sms        string     `json:"sms"`
-		Recipients []Receiver `json:"recipients"`
-	}
-
-	Receiver struct {
-		Number string `json:"number"`
-	}
-)
-
 func SmsEndpoint(username, phone, startAt, endAt string) error {
 
 	if username == "" || phone == "" || startAt == "" || endAt == "" {
