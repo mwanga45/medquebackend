@@ -39,6 +39,11 @@ type (
 		Secretkey  string `json:"secretkey"`
 		Reason     string `json:"reason"`
 	}
+
+	Email struct {
+		Message string `json:"message"`     
+
+	}
 )
 
 func BookingHistory(w http.ResponseWriter, r *http.Request) {
@@ -247,7 +252,7 @@ func PendingBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user exists
+
 	var isExist bool
 	errcheckId := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM Users WHERE user_id = $1)`, claim.ID).Scan(&isExist)
 	if errcheckId != nil {
@@ -267,12 +272,12 @@ func PendingBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get current time and date
+
 	timeNow := time.Now()
 	currentDate := timeNow.Format("2006-01-02")
 	currentTime := timeNow.Format("15:04:05")
 
-	// Query for pending bookings that haven't reached their time and date yet
+	
 	query := `
 		SELECT id, user_id, COALESCE(spec_id, 0) as spec_id, service_id, dayofweek, 
 		       start_time, end_time, booking_date, status
@@ -325,7 +330,30 @@ func PendingBooking(w http.ResponseWriter, r *http.Request) {
 		Data:    pendingList,
 	})
 }
-func UserRecommendation (w http.ResponseWriter, r *http.Response){
-	i
+
+
+func UserRecommendation(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid method",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	claims , ok := r.Context().Value("user").(*middleware.CustomClaims)
+	if !ok {
+	json.NewEncoder(w).Encode(Response{
+	 Message: "Unauthorized user",
+	 Success: false,
+	})
+	var isExist bool
+	errvalidateuser := handlerconn.Db.QueryRow(`SELECT EXIST(SELECT 1 FROM  users WHERE user_id = $1)`, claims.ID).Scan(&isExist)
+	if errvalidateuser != nil{
 	
+	}
+	}
+
+
 }
