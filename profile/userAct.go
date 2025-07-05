@@ -225,3 +225,23 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		Data:    specialnames,
 	})
 }
+func PendingBooking (w http.ResponseWriter, r *http.Request){
+	if r.Method != http.MethodGet{
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid Method",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	claim, ok := r.Context().Value("user").(*middleware.CustomClaims)
+	if !ok {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Unauthorized user ",
+			Success: false,
+		})
+		return
+	}
+	
+
+} 

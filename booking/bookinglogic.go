@@ -497,10 +497,17 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if booking exists and belongs to user
+	// Check if booking exists and belongs to user, and get booking details
 	var userID string
 	var status string
-	err := handlerconn.Db.QueryRow(`SELECT user_id, status FROM bookingtrack_tb WHERE id = $1`, req.BookingID).Scan(&userID, &status)
+	var bookingDate string
+	var startTime string
+	var endTime string
+	var serviceID int
+	var doctorID int
+	err := handlerconn.Db.QueryRow(`
+		SELECT user_id, status, booking_date, start_time, end_time, service_id, doctor_id 
+		FROM bookingtrack_tb WHERE id = $1`, req.BookingID).Scan(&userID, &status, &bookingDate, &startTime, &endTime, &serviceID, &doctorID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -532,5 +539,91 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Send notifications to all users who have bookings on the same day
+	go sendCancellationNotifications(bookingDate, startTime, endTime, serviceID, doctorID)
+
 	json.NewEncoder(w).Encode(Response{Message: "Booking cancelled successfully", Success: true})
+}
+
+// sendCancellationNotifications sends notifications to all users who have bookings on the same day
+func sendCancellationNotifications(bookingDate, startTime, endTime string, serviceID, doctorID int) {
+	// Get all users who have bookings on the same day (excluding the cancelled booking)
+	query := `
+		SELECT DISTINCT u.fullname, u.deviceid, u.user_id
+		FROM users u
+		JOIN bookingtrack_tb b ON u.user_id = b.user_id
+		WHERE b.booking_date = $1 
+		AND b.status != 'cancelled'
+		AND u.deviceid IS NOT NULL
+		AND u.deviceid != ''
+	`
+
+	rows, err := handlerconn.Db.Query(query, bookingDate)
+	if err != nil {
+		log.Printf("Error querying users for cancellation notifications: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	// Get service name for the notification
+	var serviceName string
+	err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
+	if err != nil {
+		log.Printf("Error getting service name: %v", err)
+		serviceName = "Medical Service"
+	}
+
+	// Get doctor name for the notification
+	var doctorName string
+	err = handlerconn.Db.QueryRow(`SELECT doctorname FROM doctors WHERE doctor_id = $1`, doctorID).Scan(&doctorName)
+	if err != nil {
+		log.Printf("Error getting doctor name: %v", err)
+		doctorName = "Doctor"
+	}
+
+	// Format the time for display
+	startTimeDisplay := startTime
+	if len(startTime) > 5 {
+		startTimeDisplay = startTime[:5]
+	}
+	endTimeDisplay := endTime
+	if len(endTime) > 5 {
+		endTimeDisplay = endTime[:5]
+	}
+
+	// Send notifications to each user
+	for rows.Next() {
+		var fullname, deviceid string
+		var userID int
+		if err := rows.Scan(&fullname, &deviceid, &userID); err != nil {
+			log.Printf("Error scanning user row: %v", err)
+			continue
+		}
+
+		// Skip if device ID is not a valid Expo token
+		if !isValidExpoToken(deviceid) {
+			log.Printf("Invalid Expo token for user %s: %s", fullname, deviceid)
+			continue
+		}
+
+		// Create notification message
+		message := ExpoMessage{
+			To:    deviceid,
+			Title: "New Appointment Slot Available!",
+			Body: fmt.Sprintf("Hi %s! A slot has become available on %s at %s-%s with %s for %s. Book now before it's taken!",
+				fullname, bookingDate, startTimeDisplay, endTimeDisplay, doctorName, serviceName),
+			Sound: "default",
+		}
+
+		// Send the notification
+		if err := SendNotification(message); err != nil {
+			log.Printf("Failed to send cancellation notification to %s: %v", fullname, err)
+		} else {
+			log.Printf("Cancellation notification sent to %s for slot %s-%s", fullname, startTimeDisplay, endTimeDisplay)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating through users: %v", err)
+	}
 }
