@@ -8,6 +8,7 @@ import (
 	handlerconn "medquemod/db_conn"
 	"medquemod/middleware"
 	"net/http"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -225,8 +226,8 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		Data:    specialnames,
 	})
 }
-func PendingBooking (w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodGet{
+func PendingBooking(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Invalid Method",
 			Success: false,
@@ -234,14 +235,93 @@ func PendingBooking (w http.ResponseWriter, r *http.Request){
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+
 	claim, ok := r.Context().Value("user").(*middleware.CustomClaims)
 	if !ok {
 		json.NewEncoder(w).Encode(Response{
-			Message: "Unauthorized user ",
+			Message: "Unauthorized user",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Check if user exists
+	var isExist bool
+	errcheckId := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM Users WHERE user_id = $1)`, claim.ID).Scan(&isExist)
+	if errcheckId != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server Error",
 			Success: false,
 		})
 		return
 	}
-	
 
-} 
+	if !isExist {
+		json.NewEncoder(w).Encode(Response{
+			Message: "User doesn't exist",
+			Success: false,
+			Data:    nil,
+		})
+		return
+	}
+
+	// Get current time and date
+	timeNow := time.Now()
+	currentDate := timeNow.Format("2006-01-02")
+	currentTime := timeNow.Format("15:04:05")
+
+	// Query for pending bookings that haven't reached their time and date yet
+	query := `
+		SELECT id, user_id, COALESCE(spec_id, 0) as spec_id, service_id, dayofweek, 
+		       start_time, end_time, booking_date, status
+		FROM bookingtrack_tb 
+		WHERE user_id = $1 
+		AND status != 'cancelled'
+		AND (
+			(booking_date > $2) 
+			OR (booking_date = $2 AND start_time > $3)
+		)
+		ORDER BY booking_date ASC, start_time ASC
+	`
+
+	rows, err := handlerconn.Db.Query(query, claim.ID, currentDate, currentTime)
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server Error",
+			Success: false,
+		})
+		return
+	}
+	defer rows.Close()
+
+	pendingList := make([]Historyforme, 0)
+	for rows.Next() {
+		var h Historyforme
+		err := rows.Scan(&h.BookingID, &h.UserId, &h.Spec_id, &h.Service_id, &h.DayofWeek, &h.StartTime, &h.EndTime, &h.BookingDate, &h.Status)
+		if err != nil {
+			fmt.Printf("Scan error: %v\n", err)
+			json.NewEncoder(w).Encode(Response{
+				Message: "Error scanning row: " + err.Error(),
+				Success: false,
+			})
+			return
+		}
+		pendingList = append(pendingList, h)
+	}
+
+	if errRow := rows.Err(); errRow != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(Response{
+		Message: "Pending bookings fetched successfully",
+		Success: true,
+		Data:    pendingList,
+	})
+}
