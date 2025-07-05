@@ -154,7 +154,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
 			fmt.Println("UserId being inserted:", UserId)
 
-			
 			doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
 			if err != nil {
 				fmt.Println("Error converting doctor_id to int:", err)
@@ -185,7 +184,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			fmt.Println("Booking inserted successfully")
-			phone_number := strings.Replace(phone, "+","",-1)
+			phone_number := strings.Replace(phone, "+", "", -1)
 			errsms := smsendpoint.SmsEndpoint(Username, phone_number, bkreq.StartTime, bkreq.EndTime)
 			if errsms != nil {
 				fmt.Println("Error sending SMS:", errsms)
@@ -237,7 +236,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("DoctorID being inserted:", bkreq.DoctorID)
 		fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
 
-
 		doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
 		if err != nil {
 			fmt.Println("Error converting doctor_id to int:", err)
@@ -248,7 +246,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-	
 		serviceIDInt, err := strconv.Atoi(bkreq.ServiceID)
 		if err != nil {
 			fmt.Println("Error converting service_id to int:", err)
@@ -351,7 +348,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	type schedule struct {
 		docID   int
 		docName string
@@ -391,7 +387,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	var results []bkservrespond
 
-
 	for _, s := range schedules {
 		dateStr, ok := allowedDates[s.dayInt]
 		if !ok {
@@ -422,7 +417,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 			if s.dayInt == todayInt && ts.EndTime <= currentTime {
 				continue
 			}
-
 
 			var status string
 			err := tx.QueryRow(`
@@ -477,4 +471,66 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 func TriggerExpoPushNotifications() {
 	// checkPendingNotifications is defined in notify.go and uses SendNotification
 	ManualTriggerNotifications()
+}
+
+// CancelBooking allows a user to cancel their booking by booking ID
+func CancelBooking(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{Message: "Invalid method", Success: false})
+		return
+	}
+
+	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(Response{Message: "Unauthorized", Success: false})
+		return
+	}
+
+	var req struct {
+		BookingID int `json:"booking_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{Message: "Invalid payload", Success: false})
+		return
+	}
+
+	// Check if booking exists and belongs to user
+	var userID string
+	var status string
+	err := handlerconn.Db.QueryRow(`SELECT user_id, status FROM bookingtrack_tb WHERE id = $1`, req.BookingID).Scan(&userID, &status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(Response{Message: "Booking not found", Success: false})
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Message: "Database error", Success: false})
+		return
+	}
+
+	if userID != claims.ID {
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(Response{Message: "You are not allowed to cancel this booking", Success: false})
+		return
+	}
+
+	if status == "cancelled" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{Message: "Booking is already cancelled", Success: false})
+		return
+	}
+
+	// Update booking status to 'cancelled'
+	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = 'cancelled' WHERE id = $1`, req.BookingID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Message: "Failed to cancel booking", Success: false})
+		return
+	}
+
+	json.NewEncoder(w).Encode(Response{Message: "Booking cancelled successfully", Success: true})
 }
