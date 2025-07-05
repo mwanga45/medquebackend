@@ -325,3 +325,7 @@ func PendingBooking(w http.ResponseWriter, r *http.Request) {
 		Data:    pendingList,
 	})
 }
+func UserRecommendation (w http.ResponseWriter, r *http.Response){
+	i
+	
+}
