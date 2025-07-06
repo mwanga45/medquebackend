@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -8,9 +9,11 @@ import (
 	handlerconn "medquemod/db_conn"
 	"medquemod/middleware"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/gomail.v2"
 )
 
 type (
@@ -41,8 +44,7 @@ type (
 	}
 
 	Email struct {
-		Message string `json:"message"`     
-
+		Message string `json:"message"`
 	}
 )
 
@@ -252,7 +254,6 @@ func PendingBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	var isExist bool
 	errcheckId := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM Users WHERE user_id = $1)`, claim.ID).Scan(&isExist)
 	if errcheckId != nil {
@@ -272,12 +273,10 @@ func PendingBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	timeNow := time.Now()
 	currentDate := timeNow.Format("2006-01-02")
 	currentTime := timeNow.Format("15:04:05")
 
-	
 	query := `
 		SELECT id, user_id, COALESCE(spec_id, 0) as spec_id, service_id, dayofweek, 
 		       start_time, end_time, booking_date, status
@@ -331,7 +330,6 @@ func PendingBooking(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 func UserRecommendation(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		json.NewEncoder(w).Encode(Response{
@@ -342,18 +340,73 @@ func UserRecommendation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	claims , ok := r.Context().Value("user").(*middleware.CustomClaims)
+	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
 	if !ok {
-	json.NewEncoder(w).Encode(Response{
-	 Message: "Unauthorized user",
-	 Success: false,
-	})
+		json.NewEncoder(w).Encode(Response{
+			Message: "Unauthorized user",
+			Success: false,
+		})
+		return
+	}
 	var isExist bool
-	errvalidateuser := handlerconn.Db.QueryRow(`SELECT EXIST(SELECT 1 FROM  users WHERE user_id = $1)`, claims.ID).Scan(&isExist)
-	if errvalidateuser != nil{
-	
+	errvalidateuser := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM  Users WHERE user_id = $1)`, claims.ID).Scan(&isExist)
+	if errvalidateuser != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		fmt.Print("something went wrong", errvalidateuser)
+		return
 	}
+	if !isExist {
+		json.NewEncoder(w).Encode(Response{
+			Message: "User is not exist",
+			Success: false,
+		})
+		return
+	}
+	var email string
+	errCheck := handlerconn.Db.QueryRow(`SELECT email FROM users WHERE user_id = $1`, claims.ID).Scan(&email)
+	if errCheck != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server Error failde to find email",
+			Success: false,
+		})
+		fmt.Print("something went wrong:", errCheck)
+		return
+	}
+	var reqsms Email
+	admin_Email := "issamwanga02@gmail.com"
+	json.NewDecoder(r.Body).Decode(&reqsms)
+	m := gomail.NewMessage()
+	m.SetHeader("From", email)
+	m.SetHeader("To", admin_Email)
+	m.SetHeader("Subject", "My recommendation")
+	m.SetBody("text/plain", reqsms.Message)
+
+	// Get Gmail app password from environment variable
+	gmailPassword := os.Getenv("GMAIL_APP_PASSWORD")
+	if gmailPassword == "" {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Gmail configuration error",
+			Success: false,
+		})
+		return
 	}
 
-
+	d := gomail.NewDialer("smtp.gmail.com", 587, email, gmailPassword)
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	err := d.DialAndSend(m)
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server",
+			Success: false,
+		})
+		fmt.Print("Something went wrong", err)
+		return
+	}
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfuly sent",
+		Success: true,
+	})
 }

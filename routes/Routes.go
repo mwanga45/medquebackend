@@ -56,5 +56,6 @@ func HandleRoutes(r *mux.Router) {
 	userAct.HandleFunc("/assignspec", profile.UserAct).Methods("POST")
 	userAct.HandleFunc("/bookinghistory", profile.BookingHistory).Methods("GET")
 	userAct.HandleFunc("/pendingbookings", profile.PendingBooking).Methods("GET")
+	userAct.HandleFunc("/recommendation",profile.UserRecommendation).Methods("POST")
 
 }
