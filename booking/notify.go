@@ -122,18 +122,15 @@ func checkPendingNotifications() {
 			continue
 		}
 
-		// Create the full booking datetime
 		bookingDateTime := time.Date(
 			bookingDate.Year(), bookingDate.Month(), bookingDate.Day(),
 			startTimeParsed.Hour(), startTimeParsed.Minute(), startTimeParsed.Second(),
 			0, time.UTC,
 		)
 
-		// Calculate notification time (5 minutes before booking)
 		notificationTime := bookingDateTime.Add(-5 * time.Minute)
 		currentTime := time.Now()
 
-		// Check if it's time to send notification (within 1 minute of notification time)
 		if currentTime.After(notificationTime) && currentTime.Before(notificationTime.Add(1*time.Minute)) {
 			msg := ExpoMessage{
 				To:    deviceID,
@@ -215,4 +212,26 @@ func GetNotificationStatus() (map[string]int, error) {
 func ManualTriggerNotifications() {
 	log.Println("Manually triggering notification check...")
 	checkPendingNotifications()
+}
+
+// RegisterPushToken handles registration of Expo push tokens from the frontend
+func RegisterPushToken(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		DeviceID string `json:"deviceId"`
+	}
+	var req request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+	if req.DeviceID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Missing deviceId"})
+		return
+	}
+	// TODO: Associate deviceId with the authenticated user in the database
+	log.Printf("Received push token: %s", req.DeviceID)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
