@@ -627,3 +627,29 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		log.Printf("Error iterating through users: %v", err)
 	}
 }
+   // TestPushNotification - for manual testing
+   func TestPushNotification(w http.ResponseWriter, r *http.Request) {
+       type request struct {
+           DeviceID string `json:"deviceId"`
+       }
+       var req request
+       if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+           w.WriteHeader(http.StatusBadRequest)
+           json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+           return
+       }
+       msg := ExpoMessage{
+           To:    req.DeviceID,
+           Title: "Test Notification",
+           Body:  "This is a test push notification!",
+           Sound: "default",
+       }
+       err := SendNotification(msg)
+       if err != nil {
+           w.WriteHeader(http.StatusInternalServerError)
+           json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+           return
+       }
+       w.WriteHeader(http.StatusOK)
+       json.NewEncoder(w).Encode(map[string]string{"status": "sent"})
+   }

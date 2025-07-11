@@ -59,5 +59,7 @@ func HandleRoutes(r *mux.Router) {
 	userAct.HandleFunc("/recommendation", profile.UserRecommendation).Methods("POST")
 	// Add route for registering Expo push token
 	userAct.HandleFunc("/register-push-token", booking.RegisterPushToken).Methods("POST")
+	// Add test push notification endpoint
+	userAct.HandleFunc("/test-push", booking.SendTestNotificationHandler).Methods("POST")
 
 }
