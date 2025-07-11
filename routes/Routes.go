@@ -57,7 +57,6 @@ func HandleRoutes(r *mux.Router) {
 	userAct.HandleFunc("/bookinghistory", profile.BookingHistory).Methods("GET")
 	userAct.HandleFunc("/pendingbookings", profile.PendingBooking).Methods("GET")
 	userAct.HandleFunc("/recommendation", profile.UserRecommendation).Methods("POST")
-	// Add route for registering Expo push token
 	userAct.HandleFunc("/register-push-token", booking.RegisterPushToken).Methods("POST")
 
 }
