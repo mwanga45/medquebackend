@@ -1,4 +1,4 @@
-package Routesf_test
+package routes
 
 import (
 	"medquemod/api"
@@ -15,8 +15,7 @@ import (
 
 func HandleRoutes(r *mux.Router) {
 
-	auth := r.PathPrefix("/auth").Subrouter() //subrouter for the authentication
-
+	auth := r.PathPrefix("/auth").Subrouter()
 	// Authentication alongSide   the  chatbot routes
 	auth.HandleFunc("/login", authentic.HandleLogin).Methods("POST")
 	auth.HandleFunc("/register", authentic.Handler).Methods("POST")
@@ -33,6 +32,7 @@ func HandleRoutes(r *mux.Router) {
 	bookingRoutes.HandleFunc("/getservice", api.GetService).Methods("GET")
 	bookingRoutes.HandleFunc("/serviceslot", booking.Bookinglogic).Methods("POST")
 	bookingRoutes.HandleFunc("/bookingreq", booking.Bookingpayload).Methods("POST")
+	bookingRoutes.HandleFunc("/cancelbooking", booking.CancelBooking).Methods("POST")
 
 	// ROUTES FOR THE ADMIN
 	Adm := r.PathPrefix("/admin").Subrouter()
@@ -52,7 +52,12 @@ func HandleRoutes(r *mux.Router) {
 	dkt.HandleFunc("/register", docact.Registration).Methods("POST")
 	// UserActivit
 	userAct := r.PathPrefix("/user").Subrouter()
-	userAct.Use(middleware.VerifyTokenMiddleware) // Protect user routes with authentication
+	userAct.Use(middleware.VerifyTokenMiddleware)
 	userAct.HandleFunc("/assignspec", profile.UserAct).Methods("POST")
+	userAct.HandleFunc("/bookinghistory", profile.BookingHistory).Methods("GET")
+	userAct.HandleFunc("/pendingbookings", profile.PendingBooking).Methods("GET")
+	userAct.HandleFunc("/recommendation", profile.UserRecommendation).Methods("POST")
+	// Add route for registering Expo push token
+	userAct.HandleFunc("/register-push-token", booking.RegisterPushToken).Methods("POST")
 
 }

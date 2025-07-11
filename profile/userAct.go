@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -8,8 +9,11 @@ import (
 	handlerconn "medquemod/db_conn"
 	"medquemod/middleware"
 	"net/http"
+	"os"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/gomail.v2"
 )
 
 type (
@@ -20,50 +24,40 @@ type (
 		Data      interface{} `json:"data,omitempty"`
 	}
 	Historyforme struct {
-		UserId      int    `json:"userId"`
-		ServiceId   int    `json:"serviceId"`
-		SpecId      int    `json:"specId"`
-		DayOfWeek   int    `json:"dayOfWeek"`
-		StartTime   string `json:"startTime"`
-		EndTime     string `json:"endTime"`
-		BookingDate string `json:"bookingDate"`
+		BookingID   int    `json:"booking_id"`
+		UserId      int    `json:"user_id"`
+		Service_id  int    `json:"service_id"`
+		Spec_id     int    `json:"spec_id"`
+		DayofWeek   int    `json:"dayofweek"`
+		StartTime   string `json:"start_time"`
+		EndTime     string `json:"end_time"`
+		BookingDate string `json:"booking_date"`
+		Status      string `json:"status"`
 	}
-	// HistoryNotforme struct {
-	// 	UserId   int    `json:"user_id"`
-	// 	Spec_id int    `json:"spec_id"`
-	// 	Service_id int	`json:"service_id"`
-	// 	DayofWeek int `json:"dayofweek"`
-	// }
-	CreatePayload struct {
+	Createpayload struct {
 		Age        int    `json:"age"`
-		FirstName  string `json:"firstName"`
-		SecondName string `json:"secondName"`
+		Firstname  string `json:"firstname"`
+		Secondname string `json:"Secondname"`
 		Dial       string `json:"dial"`
-		SecretKey  string `json:"secretKey"`
+		Secretkey  string `json:"secretkey"`
 		Reason     string `json:"reason"`
+	}
+
+	Email struct {
+		Message string `json:"message"`
 	}
 )
 
 func BookingHistory(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		json.NewEncoder(w).Encode(Response{
-			Message: "Invalid payload",
+			Message: "Invalid method",
 			Success: false,
 		})
 		return
-
 	}
 	w.Header().Set("Content-Type", "application/json")
-	client, errTx := handlerconn.Db.Begin()
-	if errTx != nil {
-		json.NewEncoder(w).Encode(Response{
-			Message: "Internal ServerError",
-			Success: false,
-		})
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer client.Rollback()
+
 	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
 	if !ok {
 		json.NewEncoder(w).Encode(Response{
@@ -73,26 +67,29 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+
+	// Check if user exists
 	var isExist bool
-	errcheckId := client.QueryRow(`SELECT EXISTS(SELECT 1 FROM Users WHERE user_id = $1)`, claims.ID).Scan(&isExist)
+	errcheckId := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM Users WHERE user_id = $1)`, claims.ID).Scan(&isExist)
 	if errcheckId != nil {
-		if errcheckId == sql.ErrNoRows {
-			json.NewEncoder(w).Encode(Response{
-				Message: "User doesn`t exist ",
-				Success: false,
-				Data:    nil,
-			})
-			return
-		}
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal Server Error",
 			Success: false,
 		})
 		return
 	}
-	var history Historyforme
-	json.NewDecoder(r.Body).Decode(&history)
-	rows, err := client.Query(`SELECT user_id, spec_id, service_id, dayofweek, starttime, endtime, bookingdate FROM Bookingtrack_tb WHERE user_id = $1 AND spec_id = $2 AND service_id = $3`, claims.ID, history.SpecId, history.ServiceId)
+
+	if !isExist {
+		json.NewEncoder(w).Encode(Response{
+			Message: "User doesn't exist",
+			Success: false,
+			Data:    nil,
+		})
+		return
+	}
+
+	// Get all bookings for the user - using COALESCE to handle NULL spec_id
+	rows, err := handlerconn.Db.Query(`SELECT id, user_id, COALESCE(spec_id, 0) as spec_id, service_id, dayofweek, start_time, end_time, booking_date, status FROM bookingtrack_tb WHERE user_id = $1 ORDER BY created_at DESC`, claims.ID)
 	if err != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal Server Error",
@@ -105,24 +102,18 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 	historyList := make([]Historyforme, 0)
 	for rows.Next() {
 		var h Historyforme
-		err := rows.Scan(&h.UserId, &h.SpecId, &h.ServiceId, &h.DayOfWeek, &h.StartTime, &h.EndTime, &h.BookingDate)
+		err := rows.Scan(&h.BookingID, &h.UserId, &h.Spec_id, &h.Service_id, &h.DayofWeek, &h.StartTime, &h.EndTime, &h.BookingDate, &h.Status)
 		if err != nil {
+			fmt.Printf("Scan error: %v\n", err)
 			json.NewEncoder(w).Encode(Response{
-				Message: "Error scanning row",
+				Message: "Error scanning row: " + err.Error(),
 				Success: false,
 			})
 			return
 		}
 		historyList = append(historyList, h)
 	}
-	if errCommit := client.Commit(); errCommit != nil {
-		json.NewEncoder(w).Encode(Response{
-			Message: "Internal ServerError",
-			Success: false,
-		})
-		fmt.Println("something went wrong", errCommit)
-		return
-	}
+
 	if errRow := rows.Err(); errRow != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Something went wrong",
@@ -130,12 +121,12 @@ func BookingHistory(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
 	json.NewEncoder(w).Encode(Response{
 		Message: "Booking history fetched successfully",
 		Success: true,
 		Data:    historyList,
 	})
-
 }
 func UserAct(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -148,6 +139,7 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	client, errTx := handlerconn.Db.Begin()
 	if errTx != nil {
+
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal ServerError",
 			Success: false,
@@ -182,7 +174,7 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	var reqpayload CreatePayload
+	var reqpayload Createpayload
 
 	errDec := json.NewDecoder(r.Body).Decode(&reqpayload)
 	if errDec != nil {
@@ -203,15 +195,15 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Username := fmt.Sprint(reqpayload.FirstName + " " + reqpayload.SecondName)
-	if errsecretkey := sidefunc_test.ValidateSecretkey(reqpayload.SecretKey); errsecretkey != nil {
+	Username := fmt.Sprint(reqpayload.Firstname + " " + reqpayload.Secondname)
+	if errsecretkey := sidefunc_test.ValidateSecretkey(reqpayload.Secretkey); errsecretkey != nil {
 		json.NewEncoder(w).Encode(Response{
 			Erroruser: errsecretkey.Error(),
 			Success:   false,
 		})
 		return
 	}
-	hashsecretkey, _ := bcrypt.GenerateFromPassword([]byte(reqpayload.SecretKey), bcrypt.DefaultCost)
+	hashsecretkey, _ := bcrypt.GenerateFromPassword([]byte(reqpayload.Secretkey), bcrypt.DefaultCost)
 	var newspecId int
 
 	InsertError := client.QueryRow(`INSERT INTO Specialgroup (Username,secretkey, Age, managedby_id, dialforCreator, dialforUser, reason ) VALUES($1,$2,$3,$4,$5,$6) RETURNING spec_id`, Username, hashsecretkey, reqpayload.Age, Phone, reqpayload.Dial, reqpayload.Reason).Scan(&newspecId)
@@ -234,9 +226,187 @@ func UserAct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	specialnames[newspecId] = Username
+
 	json.NewEncoder(w).Encode(Response{
 		Message: "successfully create new user",
 		Success: true,
 		Data:    specialnames,
+	})
+}
+func PendingBooking(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid Method",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+
+	claim, ok := r.Context().Value("user").(*middleware.CustomClaims)
+	if !ok {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Unauthorized user",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	var isExist bool
+	errcheckId := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM Users WHERE user_id = $1)`, claim.ID).Scan(&isExist)
+	if errcheckId != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server Error",
+			Success: false,
+		})
+		return
+	}
+
+	if !isExist {
+		json.NewEncoder(w).Encode(Response{
+			Message: "User doesn't exist",
+			Success: false,
+			Data:    nil,
+		})
+		return
+	}
+
+	timeNow := time.Now()
+	currentDate := timeNow.Format("2006-01-02")
+	currentTime := timeNow.Format("15:04:05")
+
+	query := `
+		SELECT id, user_id, COALESCE(spec_id, 0) as spec_id, service_id, dayofweek, 
+		       start_time, end_time, booking_date, status
+		FROM bookingtrack_tb 
+		WHERE user_id = $1 
+		AND status != 'cancelled'
+		AND (
+			(booking_date > $2) 
+			OR (booking_date = $2 AND start_time > $3)
+		)
+		ORDER BY booking_date ASC, start_time ASC
+	`
+
+	rows, err := handlerconn.Db.Query(query, claim.ID, currentDate, currentTime)
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server Error",
+			Success: false,
+		})
+		return
+	}
+	defer rows.Close()
+
+	pendingList := make([]Historyforme, 0)
+	for rows.Next() {
+		var h Historyforme
+		err := rows.Scan(&h.BookingID, &h.UserId, &h.Spec_id, &h.Service_id, &h.DayofWeek, &h.StartTime, &h.EndTime, &h.BookingDate, &h.Status)
+		if err != nil {
+			fmt.Printf("Scan error: %v\n", err)
+			json.NewEncoder(w).Encode(Response{
+				Message: "Error scanning row: " + err.Error(),
+				Success: false,
+			})
+			return
+		}
+		pendingList = append(pendingList, h)
+	}
+
+	if errRow := rows.Err(); errRow != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(Response{
+		Message: "Pending bookings fetched successfully",
+		Success: true,
+		Data:    pendingList,
+	})
+}
+
+func UserRecommendation(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invalid method",
+			Success: false,
+		})
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
+	if !ok {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Unauthorized user",
+			Success: false,
+		})
+		return
+	}
+	var isExist bool
+	errvalidateuser := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM  Users WHERE user_id = $1)`, claims.ID).Scan(&isExist)
+	if errvalidateuser != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		fmt.Print("something went wrong", errvalidateuser)
+		return
+	}
+	if !isExist {
+		json.NewEncoder(w).Encode(Response{
+			Message: "User is not exist",
+			Success: false,
+		})
+		return
+	}
+	var email string
+	errCheck := handlerconn.Db.QueryRow(`SELECT email FROM users WHERE user_id = $1`, claims.ID).Scan(&email)
+	if errCheck != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server Error failde to find email",
+			Success: false,
+		})
+		fmt.Print("something went wrong:", errCheck)
+		return
+	}
+	var reqsms Email
+	admin_Email := "issamwanga02@gmail.com"
+	json.NewDecoder(r.Body).Decode(&reqsms)
+	m := gomail.NewMessage()
+	m.SetHeader("From", email)
+	m.SetHeader("To", admin_Email)
+	m.SetHeader("Subject", "My recommendation")
+	m.SetBody("text/plain", reqsms.Message)
+
+	// Get Gmail app password from environment variable
+	gmailPassword := os.Getenv("GMAIL_APP_PASSWORD")
+	if gmailPassword == "" {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Gmail configuration error",
+			Success: false,
+		})
+		return
+	}
+
+	d := gomail.NewDialer("smtp.gmail.com", 587, email, gmailPassword)
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	err := d.DialAndSend(m)
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal Server",
+			Success: false,
+		})
+		fmt.Print("Something went wrong", err)
+		return
+	}
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfuly sent",
+		Success: true,
 	})
 }

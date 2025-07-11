@@ -154,7 +154,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
 			fmt.Println("UserId being inserted:", UserId)
 
-			
 			doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
 			if err != nil {
 				fmt.Println("Error converting doctor_id to int:", err)
@@ -185,7 +184,7 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			fmt.Println("Booking inserted successfully")
-			phone_number := strings.Replace(phone, "+","",-1)
+			phone_number := strings.Replace(phone, "+", "", -1)
 			errsms := smsendpoint.SmsEndpoint(Username, phone_number, bkreq.StartTime, bkreq.EndTime)
 			if errsms != nil {
 				fmt.Println("Error sending SMS:", errsms)
@@ -237,7 +236,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("DoctorID being inserted:", bkreq.DoctorID)
 		fmt.Println("ServiceID being inserted:", bkreq.ServiceID)
 
-
 		doctorIDInt, err := strconv.Atoi(bkreq.DoctorID)
 		if err != nil {
 			fmt.Println("Error converting doctor_id to int:", err)
@@ -248,7 +246,6 @@ func Bookingpayload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-	
 		serviceIDInt, err := strconv.Atoi(bkreq.ServiceID)
 		if err != nil {
 			fmt.Println("Error converting service_id to int:", err)
@@ -351,7 +348,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	type schedule struct {
 		docID   int
 		docName string
@@ -391,7 +387,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 
 	var results []bkservrespond
 
-
 	for _, s := range schedules {
 		dateStr, ok := allowedDates[s.dayInt]
 		if !ok {
@@ -422,7 +417,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 			if s.dayInt == todayInt && ts.EndTime <= currentTime {
 				continue
 			}
-
 
 			var status string
 			err := tx.QueryRow(`
@@ -477,4 +471,159 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 func TriggerExpoPushNotifications() {
 	// checkPendingNotifications is defined in notify.go and uses SendNotification
 	ManualTriggerNotifications()
+}
+
+// CancelBooking allows a user to cancel their booking by booking ID
+func CancelBooking(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{Message: "Invalid method", Success: false})
+		return
+	}
+
+	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(Response{Message: "Unauthorized", Success: false})
+		return
+	}
+
+	var req struct {
+		BookingID int `json:"booking_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{Message: "Invalid payload", Success: false})
+		return
+	}
+
+	// Check if booking exists and belongs to user, and get booking details
+	var userID string
+	var status string
+	var bookingDate string
+	var startTime string
+	var endTime string
+	var serviceID int
+	var doctorID int
+	err := handlerconn.Db.QueryRow(`
+		SELECT user_id, status, booking_date, start_time, end_time, service_id, doctor_id 
+		FROM bookingtrack_tb WHERE id = $1`, req.BookingID).Scan(&userID, &status, &bookingDate, &startTime, &endTime, &serviceID, &doctorID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(Response{Message: "Booking not found", Success: false})
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Message: "Database error", Success: false})
+		return
+	}
+
+	if userID != claims.ID {
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(Response{Message: "You are not allowed to cancel this booking", Success: false})
+		return
+	}
+
+	if status == "cancelled" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{Message: "Booking is already cancelled", Success: false})
+		return
+	}
+
+	// Update booking status to 'cancelled'
+	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = 'cancelled' WHERE id = $1`, req.BookingID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Message: "Failed to cancel booking", Success: false})
+		return
+	}
+
+	// Send notifications to all users who have bookings on the same day
+	go sendCancellationNotifications(bookingDate, startTime, endTime, serviceID, doctorID)
+
+	json.NewEncoder(w).Encode(Response{Message: "Booking cancelled successfully", Success: true})
+}
+
+// sendCancellationNotifications sends notifications to all users who have bookings on the same day
+func sendCancellationNotifications(bookingDate, startTime, endTime string, serviceID, doctorID int) {
+	// Get all users who have bookings on the same day (excluding the cancelled booking)
+	query := `
+		SELECT DISTINCT u.fullname, u.deviceid, u.user_id
+		FROM users u
+		JOIN bookingtrack_tb b ON u.user_id = b.user_id
+		WHERE b.booking_date = $1 
+		AND b.status != 'cancelled'
+		AND u.deviceid IS NOT NULL
+		AND u.deviceid != ''
+	`
+
+	rows, err := handlerconn.Db.Query(query, bookingDate)
+	if err != nil {
+		log.Printf("Error querying users for cancellation notifications: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	// Get service name for the notification
+	var serviceName string
+	err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
+	if err != nil {
+		log.Printf("Error getting service name: %v", err)
+		serviceName = "Medical Service"
+	}
+
+	// Get doctor name for the notification
+	var doctorName string
+	err = handlerconn.Db.QueryRow(`SELECT doctorname FROM doctors WHERE doctor_id = $1`, doctorID).Scan(&doctorName)
+	if err != nil {
+		log.Printf("Error getting doctor name: %v", err)
+		doctorName = "Doctor"
+	}
+
+	// Format the time for display
+	startTimeDisplay := startTime
+	if len(startTime) > 5 {
+		startTimeDisplay = startTime[:5]
+	}
+	endTimeDisplay := endTime
+	if len(endTime) > 5 {
+		endTimeDisplay = endTime[:5]
+	}
+
+	// Send notifications to each user
+	for rows.Next() {
+		var fullname, deviceid string
+		var userID int
+		if err := rows.Scan(&fullname, &deviceid, &userID); err != nil {
+			log.Printf("Error scanning user row: %v", err)
+			continue
+		}
+
+		// Skip if device ID is not a valid Expo token
+		if !isValidExpoToken(deviceid) {
+			log.Printf("Invalid Expo token for user %s: %s", fullname, deviceid)
+			continue
+		}
+
+		// Create notification message
+		message := ExpoMessage{
+			To:    deviceid,
+			Title: "New Appointment Slot Available!",
+			Body: fmt.Sprintf("Hi %s! A slot has become available on %s at %s-%s with %s for %s. Book now before it's taken!",
+				fullname, bookingDate, startTimeDisplay, endTimeDisplay, doctorName, serviceName),
+			Sound: "default",
+		}
+
+		// Send the notification
+		if err := SendNotification(message); err != nil {
+			log.Printf("Failed to send cancellation notification to %s: %v", fullname, err)
+		} else {
+			log.Printf("Cancellation notification sent to %s for slot %s-%s", fullname, startTimeDisplay, endTimeDisplay)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating through users: %v", err)
+	}
 }
