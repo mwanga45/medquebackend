@@ -21,7 +21,7 @@ func HandleRoutes(r *mux.Router) {
 	auth.HandleFunc("/register", authentic.Handler).Methods("POST")
 	auth.HandleFunc("/chatbot", handler_chat.Chatbot).Methods("POST")
 	auth.HandleFunc("/dklogin", docact.DoctLogin).Methods("POST")
-	//  SHEDULE  ROUTER FOR DOCTOR INFORMATION
+
 	shedule := r.PathPrefix("/info").Subrouter()
 	shedule.HandleFunc("/docAv", api.DoctorsAvailability).Methods("GET")
 
@@ -47,19 +47,19 @@ func HandleRoutes(r *mux.Router) {
 	Adm.HandleFunc("/getDocInfo", adminact.GetDoctorInfo).Methods("GET")
 	Adm.HandleFunc("/getregserv", adminact.GetsevAvailable).Methods("GET")
 
-	// ROUTES FOR THE DOCTOR
+
 	dkt := r.PathPrefix("/dkt").Subrouter()
 	dkt.HandleFunc("/register", docact.Registration).Methods("POST")
-	// UserActivit
+
 	userAct := r.PathPrefix("/user").Subrouter()
 	userAct.Use(middleware.VerifyTokenMiddleware)
 	userAct.HandleFunc("/assignspec", profile.UserAct).Methods("POST")
 	userAct.HandleFunc("/bookinghistory", profile.BookingHistory).Methods("GET")
 	userAct.HandleFunc("/pendingbookings", profile.PendingBooking).Methods("GET")
 	userAct.HandleFunc("/recommendation", profile.UserRecommendation).Methods("POST")
-	// Add route for registering Expo push token
+
 	userAct.HandleFunc("/register-push-token", booking.RegisterPushToken).Methods("POST")
-	// Add test push notification endpoint
+
 	userAct.HandleFunc("/test-push", booking.SendTestNotificationHandler).Methods("POST")
 
 }

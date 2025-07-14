@@ -473,7 +473,7 @@ func TriggerExpoPushNotifications() {
 	ManualTriggerNotifications()
 }
 
-// CancelBooking allows a user to cancel their booking by booking ID
+
 func CancelBooking(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -497,7 +497,7 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if booking exists and belongs to user, and get booking details
+
 	var userID string
 	var status string
 	var bookingDate string
@@ -531,7 +531,7 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update booking status to 'cancelled'
+
 	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = 'cancelled' WHERE id = $1`, req.BookingID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -539,15 +539,15 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send notifications to all users who have bookings on the same day
+
 	go sendCancellationNotifications(bookingDate, startTime, endTime, serviceID, doctorID)
 
 	json.NewEncoder(w).Encode(Response{Message: "Booking cancelled successfully", Success: true})
 }
 
-// sendCancellationNotifications sends notifications to all users who have bookings on the same day
+
 func sendCancellationNotifications(bookingDate, startTime, endTime string, serviceID, doctorID int) {
-	// Get all users who have bookings on the same day (excluding the cancelled booking)
+
 	query := `
 		SELECT DISTINCT u.fullname, u.deviceid, u.user_id
 		FROM users u
@@ -565,7 +565,7 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 	}
 	defer rows.Close()
 
-	// Get service name for the notification
+
 	var serviceName string
 	err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
 	if err != nil {
@@ -573,7 +573,7 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		serviceName = "Medical Service"
 	}
 
-	// Get doctor name for the notification
+
 	var doctorName string
 	err = handlerconn.Db.QueryRow(`SELECT doctorname FROM doctors WHERE doctor_id = $1`, doctorID).Scan(&doctorName)
 	if err != nil {
@@ -581,7 +581,7 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		doctorName = "Doctor"
 	}
 
-	// Format the time for display
+
 	startTimeDisplay := startTime
 	if len(startTime) > 5 {
 		startTimeDisplay = startTime[:5]
@@ -591,7 +591,7 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		endTimeDisplay = endTime[:5]
 	}
 
-	// Send notifications to each user
+
 	for rows.Next() {
 		var fullname, deviceid string
 		var userID int
@@ -600,7 +600,7 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 			continue
 		}
 
-		// Skip if device ID is not a valid Expo token
+
 		if !isValidExpoToken(deviceid) {
 			log.Printf("Invalid Expo token for user %s: %s", fullname, deviceid)
 			continue

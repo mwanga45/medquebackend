@@ -31,7 +31,7 @@ func SmsEndpoint(username, phone, startAt, endAt string) error {
 		return fmt.Errorf("all parameters (username, phone, startAt, endAt) must be provided")
 	}
 
-	// Ensure the SMS API key is set
+
 	apiKey := os.Getenv("SMS_APIKEY")
 	if apiKey == "" {
 		return fmt.Errorf("SMS_APIKEY environment variable is not set")
@@ -54,4 +54,7 @@ func SmsEndpoint(username, phone, startAt, endAt string) error {
 	}
 
 	return nil
+}
+func SmsBookingCancellation () {
+
 }
