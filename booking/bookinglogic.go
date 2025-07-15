@@ -326,7 +326,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// Fetch all schedule rows first
 	rows, err := tx.Query(`
 		SELECT 
 		  dk.doctor_id,
@@ -374,7 +373,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		rows.Close()
 		return
 	}
-	rows.Close() // Free transaction for reuse
+	rows.Close() 
 
 	now := time.Now()
 	allowedDates := make(map[int]string, 4)
@@ -466,10 +465,9 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Use built-in Expo push notification logic
-// This function triggers the built-in notification worker to process and send pending notifications
+
 func TriggerExpoPushNotifications() {
-	// checkPendingNotifications is defined in notify.go and uses SendNotification
+
 	ManualTriggerNotifications()
 }
 
@@ -497,7 +495,7 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
+	
 	var userID string
 	var status string
 	var bookingDate string
@@ -531,7 +529,7 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
+	
 	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = 'cancelled' WHERE id = $1`, req.BookingID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -539,7 +537,7 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
+	
 	go sendCancellationNotifications(bookingDate, startTime, endTime, serviceID, doctorID)
 
 	json.NewEncoder(w).Encode(Response{Message: "Booking cancelled successfully", Success: true})
@@ -565,7 +563,6 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 	}
 	defer rows.Close()
 
-
 	var serviceName string
 	err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
 	if err != nil {
@@ -573,7 +570,7 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		serviceName = "Medical Service"
 	}
 
-
+	
 	var doctorName string
 	err = handlerconn.Db.QueryRow(`SELECT doctorname FROM doctors WHERE doctor_id = $1`, doctorID).Scan(&doctorName)
 	if err != nil {
@@ -591,7 +588,7 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		endTimeDisplay = endTime[:5]
 	}
 
-
+	
 	for rows.Next() {
 		var fullname, deviceid string
 		var userID int
@@ -600,7 +597,7 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 			continue
 		}
 
-
+		
 		if !isValidExpoToken(deviceid) {
 			log.Printf("Invalid Expo token for user %s: %s", fullname, deviceid)
 			continue
