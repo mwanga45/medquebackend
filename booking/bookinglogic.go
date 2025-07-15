@@ -373,7 +373,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		rows.Close()
 		return
 	}
-	rows.Close() 
+	rows.Close()
 
 	now := time.Now()
 	allowedDates := make(map[int]string, 4)
@@ -465,12 +465,10 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 func TriggerExpoPushNotifications() {
 
 	ManualTriggerNotifications()
 }
-
 
 func CancelBooking(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -495,7 +493,6 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	var userID string
 	var status string
 	var bookingDate string
@@ -528,23 +525,61 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{Message: "Booking is already cancelled", Success: false})
 		return
 	}
-
-	
 	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = 'cancelled' WHERE id = $1`, req.BookingID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to cancel booking", Success: false})
 		return
 	}
+	now := time.Now()
+	layout := "15:04:00"
+	current_time := now.Format(layout)
+
+	rows, errError := handlerconn.Db.Query("SELECT user_id FROM bookingtrack_tb WHERE booking_date = $1 AND start_time >= $2", bookingDate, current_time)
+	if errError != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Failed to execute query",
+			Success: false,
+		})
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			log.Printf("Error scanning user ID: %v", err)
+			continue
+		}
+
+		// Fetch user's fullname and phone
+		var username, phone string
+		err := handlerconn.Db.QueryRow("SELECT fullname, dial FROM users WHERE user_id = $1", userID).Scan(&username, &phone)
+		if err != nil {
+			log.Printf("Error fetching user info for user %s: %v", userID, err)
+			continue
+		}
+
+		var serviceName string
+		err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
+		if err != nil {
+			log.Printf("Error fetching service name for serviceID %d: %v", serviceID, err)
+			serviceName = "Medical Service"
+		}
+
+
+		err = smsendpoint.SmsBookingCancellationInform(username, serviceName, startTime, endTime, phone)
+		if err != nil {
+			log.Printf("Error sending cancellation SMS to %s: %v", phone, err)
+		}
+	}
+
 
 	
-	go sendCancellationNotifications(bookingDate, startTime, endTime, serviceID, doctorID)
 
 	json.NewEncoder(w).Encode(Response{Message: "Booking cancelled successfully", Success: true})
 }
 
-
-func sendCancellationNotifications(bookingDate, startTime, endTime string, serviceID, doctorID int) {
+func SendCancellationNotifications(bookingDate, startTime, endTime string, serviceID, doctorID int) {
 
 	query := `
 		SELECT DISTINCT u.fullname, u.deviceid, u.user_id
@@ -570,14 +605,12 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		serviceName = "Medical Service"
 	}
 
-	
 	var doctorName string
 	err = handlerconn.Db.QueryRow(`SELECT doctorname FROM doctors WHERE doctor_id = $1`, doctorID).Scan(&doctorName)
 	if err != nil {
 		log.Printf("Error getting doctor name: %v", err)
 		doctorName = "Doctor"
 	}
-
 
 	startTimeDisplay := startTime
 	if len(startTime) > 5 {
@@ -588,7 +621,6 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		endTimeDisplay = endTime[:5]
 	}
 
-	
 	for rows.Next() {
 		var fullname, deviceid string
 		var userID int
@@ -597,7 +629,6 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 			continue
 		}
 
-		
 		if !isValidExpoToken(deviceid) {
 			log.Printf("Invalid Expo token for user %s: %s", fullname, deviceid)
 			continue
@@ -624,29 +655,30 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		log.Printf("Error iterating through users: %v", err)
 	}
 }
-   // TestPushNotification - for manual testing
-   func TestPushNotification(w http.ResponseWriter, r *http.Request) {
-       type request struct {
-           DeviceID string `json:"deviceId"`
-       }
-       var req request
-       if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-           w.WriteHeader(http.StatusBadRequest)
-           json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
-           return
-       }
-       msg := ExpoMessage{
-           To:    req.DeviceID,
-           Title: "Test Notification",
-           Body:  "This is a test push notification!",
-           Sound: "default",
-       }
-       err := SendNotification(msg)
-       if err != nil {
-           w.WriteHeader(http.StatusInternalServerError)
-           json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-           return
-       }
-       w.WriteHeader(http.StatusOK)
-       json.NewEncoder(w).Encode(map[string]string{"status": "sent"})
-   }
+
+// TestPushNotification - for manual testing
+func TestPushNotification(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		DeviceID string `json:"deviceId"`
+	}
+	var req request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+	msg := ExpoMessage{
+		To:    req.DeviceID,
+		Title: "Test Notification",
+		Body:  "This is a test push notification!",
+		Sound: "default",
+	}
+	err := SendNotification(msg)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "sent"})
+}
