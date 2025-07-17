@@ -141,7 +141,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	_, err = handlerconn.Db.Exec(insert_query, Fullname, hashedsecretekey, req.Dial, req.Email, req.DeviceId, req.Birthdate, req.HomeAddress, "Patient")
 
 	if err != nil {
-		fmt.Println("DB Insert Error:", err) // Log the error for debugging
+		fmt.Println("DB Insert Error:", err) 
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
