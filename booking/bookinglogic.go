@@ -457,6 +457,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
 		return
 	}
+	fmt.Print(results)
 
 	json.NewEncoder(w).Encode(Response{
 		Message: "Successfully retrieved slots",

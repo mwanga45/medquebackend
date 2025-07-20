@@ -101,6 +101,10 @@ func Connectionpool() error {
 	}
 	log.Println("Table 'doctorshedule' created or already exists.")
 
+	// Remove unique constraint if it exists (replace with your actual constraint name if different)
+	_, _ = Db.Exec(`ALTER TABLE doctorshedule DROP CONSTRAINT IF EXISTS doctorshedule_doctor_id_day_of_week_key;`)
+	log.Println("Dropped unique constraint on doctorshedule if it existed.")
+
 	user_tb := `CREATE TABLE IF NOT EXISTS users (
   user_id SERIAL PRIMARY KEY,
   fullname VARCHAR(150) NOT NULL,
