@@ -1,6 +1,7 @@
 package routes
 
 import (
+	prediction "medquemod/Prediction"
 	"medquemod/api"
 	adminact "medquemod/api-web/adminAct"
 	docact "medquemod/api-web/docAct"
@@ -47,7 +48,7 @@ func HandleRoutes(r *mux.Router) {
 	Adm.HandleFunc("/getDocInfo", adminact.GetDoctorInfo).Methods("GET")
 	Adm.HandleFunc("/getregserv", adminact.GetsevAvailable).Methods("GET")
 	Adm.HandleFunc("/getBookingpeople", adminact.GetbookingToday).Methods("GET")
-
+	Adm.HandleFunc("/prediction", prediction.PredictionHandler).Methods("GET")
 
 	dkt := r.PathPrefix("/dkt").Subrouter()
 	dkt.HandleFunc("/register", docact.Registration).Methods("POST")

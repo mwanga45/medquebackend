@@ -370,7 +370,6 @@ func Asdocschedule(w http.ResponseWriter, r *http.Request) {
 
 	json.NewDecoder(r.Body).Decode(&shereq)
 	fmt.Printf("Decoded schedule: %+v\n", shereq)
-
 	if strings.TrimSpace(shereq.DoctorID) == "" ||
 		strings.TrimSpace(shereq.DayOfWeek) == "" ||
 		strings.TrimSpace(shereq.StartTime) == "" ||
