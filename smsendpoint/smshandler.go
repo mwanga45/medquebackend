@@ -12,7 +12,6 @@ func SmsEndpoint(username, phone, startAt, endAt string) error {
 		return fmt.Errorf("all parameters (username, phone, startAt, endAt) must be provided")
 	}
 
-
 	apiKey := os.Getenv("SMS_APIKEY")
 	if apiKey == "" {
 		return fmt.Errorf("SMS_APIKEY environment variable is not set")
@@ -35,26 +34,43 @@ func SmsEndpoint(username, phone, startAt, endAt string) error {
 	}
 	return nil
 }
-func SmsBookingCancellationInform ( username string, servicename string,start_time string,end_time string, phoneNumber string) error{
+func SmsBookingCancellationInform(username string, servicename string, start_time string, end_time string, phoneNumber string) error {
 	message := fmt.Sprintf(
 		"Hi %s!  Your booking for %s is confirmed from %s to %s. "+
-		"If you’d like to change your time slot, please do it now while spots are still available. "+
-		"Thank you!",
+			"If you’d like to change your time slot, please do it now while spots are still available. "+
+			"Thank you!",
 		username, servicename, start_time, end_time,
 	)
-	
-    Payload := types.SmsPayload{
-		SenderID:55 ,
+
+	Payload := types.SmsPayload{
+		SenderID: 55,
 		Schedule: "none",
-		Sms: message,
+		Sms:      message,
 		Recipients: []types.SmsReceiver{{
 			Number: phoneNumber,
 		}},
-		
 	}
- err := utils.SendSms(Payload)
- if err != nil{
- return	fmt.Errorf("failed to send SMS: %w", err)
- }
- return nil
+	err := utils.SendSms(Payload)
+	if err != nil {
+		return fmt.Errorf("failed to send SMS: %w", err)
+	}
+	return nil
+}
+func SmsSlotAvailableInform(username, servicename, phoneNumber string) error {
+	message := fmt.Sprintf(
+		"Hi %s! A time slot has become available for %s today. "+
+			"If you'd like to reschedule to an earlier appointment time, "+
+			"please check our app for available slots.",
+		username, servicename,
+	)
+
+	payload := types.SmsPayload{
+		SenderID: 55,
+		Schedule: "none",
+		Sms:      message,
+		Recipients: []types.SmsReceiver{{
+			Number: phoneNumber,
+		}},
+	}
+	return utils.SendSms(payload)
 }

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	prediction "medquemod/Prediction"
 	"medquemod/api"
 	adminact "medquemod/api-web/adminAct"
 	docact "medquemod/api-web/docAct"
@@ -25,7 +26,7 @@ func HandleRoutes(r *mux.Router) {
 	shedule := r.PathPrefix("/info").Subrouter()
 	shedule.HandleFunc("/docAv", api.DoctorsAvailability).Methods("GET")
 
-	// booking routers - protected with authentication middleware
+
 	bookingRoutes := r.PathPrefix("/booking").Subrouter()
 	bookingRoutes.Use(middleware.VerifyTokenMiddleware)
 
@@ -34,7 +35,7 @@ func HandleRoutes(r *mux.Router) {
 	bookingRoutes.HandleFunc("/bookingreq", booking.Bookingpayload).Methods("POST")
 	bookingRoutes.HandleFunc("/cancelbooking", booking.CancelBooking).Methods("POST")
 
-	// ROUTES FOR THE ADMIN
+
 	Adm := r.PathPrefix("/admin").Subrouter()
 	Adm.HandleFunc("/registerserv", adminact.AssignService).Methods("POST")
 	Adm.HandleFunc("/regiNonIntervalserv", adminact.AssignNonTimeserv).Methods("POST")
@@ -47,7 +48,7 @@ func HandleRoutes(r *mux.Router) {
 	Adm.HandleFunc("/getDocInfo", adminact.GetDoctorInfo).Methods("GET")
 	Adm.HandleFunc("/getregserv", adminact.GetsevAvailable).Methods("GET")
 	Adm.HandleFunc("/getBookingpeople", adminact.GetbookingToday).Methods("GET")
-
+	Adm.HandleFunc("/prediction", prediction.PredictionHandler).Methods("GET")
 
 	dkt := r.PathPrefix("/dkt").Subrouter()
 	dkt.HandleFunc("/register", docact.Registration).Methods("POST")

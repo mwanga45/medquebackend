@@ -136,12 +136,28 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	var checkUiId bool
+	checkError := handlerconn.Db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE deviceid = $1)", req.DeviceId).Scan(&checkUiId)
+	if checkError != nil {
+		json.NewEncoder(w).Encode(response{
+			Message: "Something went wrong",
+			Success: false,
+		})
+		return
+	}
+	if checkUiId {
+		json.NewEncoder(w).Encode(response{
+			Message: "Device is already used to assign  other device",
+			Success: false,
+		})
+		return
+	}
 	insert_query := "INSERT INTO Users(fullname, secretekey, dial, email, deviceid, birthdate, home_address, user_type) VALUES($1,$2,$3,$4,$5,$6,$7,$8)"
 
 	_, err = handlerconn.Db.Exec(insert_query, Fullname, hashedsecretekey, req.Dial, req.Email, req.DeviceId, req.Birthdate, req.HomeAddress, "Patient")
 
 	if err != nil {
-		fmt.Println("DB Insert Error:", err) 
+		fmt.Println("DB Insert Error:", err)
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}

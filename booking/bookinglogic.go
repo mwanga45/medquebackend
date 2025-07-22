@@ -14,6 +14,8 @@ import (
 	handlerconn "medquemod/db_conn"
 	"medquemod/middleware"
 	"medquemod/smsendpoint"
+	"medquemod/types"
+	"medquemod/utils"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -52,6 +54,16 @@ type (
 		ForMe     bool   `json:"forme"`
 		Specname  string `json:"specname"`
 		Speckey   string `json:"speckey"`
+	}
+	Payload struct {
+		SenderID   int        `json:"sender_id"`
+		Schedule   string     `json:"schedule"`
+		Sms        string     `json:"sms"`
+		Recipients []Receiver `json:"recipients"`
+	}
+
+	Receiver struct {
+		Number string `json:"number"`
 	}
 )
 
@@ -470,7 +482,6 @@ func TriggerExpoPushNotifications() {
 
 	ManualTriggerNotifications()
 }
-
 func CancelBooking(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -526,58 +537,139 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{Message: "Booking is already cancelled", Success: false})
 		return
 	}
+
 	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = 'cancelled' WHERE id = $1`, req.BookingID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to cancel booking", Success: false})
 		return
 	}
-	now := time.Now()
-	layout := "15:04:00"
-	current_time := now.Format(layout)
 
-	rows, errError := handlerconn.Db.Query("SELECT user_id FROM bookingtrack_tb WHERE booking_date = $1 AND start_time >= $2", bookingDate, current_time)
-	if errError != nil {
-		json.NewEncoder(w).Encode(Response{
-			Message: "Failed to execute query",
-			Success: false,
-		})
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var userID string
-		if err := rows.Scan(&userID); err != nil {
-			log.Printf("Error scanning user ID: %v", err)
-			continue
+	extractTime := func(t string) string {
+		parsed, err := time.Parse(time.RFC3339, t)
+		if err == nil {
+			return parsed.Format("15:04")
 		}
-
-		// Fetch user's fullname and phone
-		var username, phone string
-		err := handlerconn.Db.QueryRow("SELECT fullname, dial FROM users WHERE user_id = $1", userID).Scan(&username, &phone)
-		if err != nil {
-			log.Printf("Error fetching user info for user %s: %v", userID, err)
-			continue
+		if len(t) >= 5 && t[2] == ':' {
+			if len(t) > 5 {
+				return t[:5]
+			}
+			return t
 		}
-
-		var serviceName string
-		err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
-		if err != nil {
-			log.Printf("Error fetching service name for serviceID %d: %v", serviceID, err)
-			serviceName = "Medical Service"
-		}
-
-
-		err = smsendpoint.SmsBookingCancellationInform(username, serviceName, startTime, endTime, phone)
-		if err != nil {
-			log.Printf("Error sending cancellation SMS to %s: %v", phone, err)
-		}
+		return t
 	}
 
+	// Get service name
+	var serviceName string
+	err = handlerconn.Db.QueryRow(`
+		SELECT servicename 
+		FROM serviceavailable 
+		WHERE serv_id = $1`, 
+		serviceID).Scan(&serviceName)
+	if err != nil {
+		serviceName = "Medical Service"
+	}
 
+	// Send cancellation SMS to cancelling user
+	var username, phone string
+	err = handlerconn.Db.QueryRow(`
+		SELECT fullname, dial 
+		FROM users 
+		WHERE user_id = $1`, 
+		userID).Scan(&username, &phone)
+	if err == nil {
+		startTimeOnly := extractTime(startTime)
+		endTimeOnly := extractTime(endTime)
+		cleanPhone := strings.Replace(phone, "+", "", -1)
+		
+		err = smsendpoint.SmsBookingCancellationInform(username, serviceName, startTimeOnly, endTimeOnly, cleanPhone)
+		if err != nil {
+			log.Printf("Failed to send cancellation SMS: %v", err)
+		}
+	} else {
+		log.Printf("Error fetching cancelling user details: %v", err)
+	}
+
+
+	currentTime := time.Now().Format("15:04")
+
+	// Find all users with bookings for the same service on the same day (excluding cancelled user)
+	rows, err := handlerconn.Db.Query(`
+		SELECT DISTINCT u.fullname, u.dial 
+		FROM bookingtrack_tb b
+		JOIN users u ON b.user_id = u.user_id
+		WHERE b.booking_date = $1 
+		AND b.service_id = $2 
+		AND b.status != 'cancelled'
+		AND b.user_id != $3
+		AND b.start_time::time >= $4::time`,
+		bookingDate, serviceID, userID, currentTime)
 	
+	if err != nil {
+		log.Printf("Error querying affected bookings: %v", err)
+	} else {
+		defer rows.Close()
+		
+		for rows.Next() {
+			var otherUsername, otherPhone string
+			if err := rows.Scan(&otherUsername, &otherPhone); err != nil {
+				log.Printf("Error scanning user: %v", err)
+				continue
+			}
+			
+			cleanPhone := strings.Replace(otherPhone, "+", "", -1)
+			err = smsendpoint.SmsSlotAvailableInform(otherUsername, serviceName, cleanPhone)
+			if err != nil {
+				log.Printf("Failed to send availability SMS to %s: %v", cleanPhone, err)
+			}
+		}
+		
+		if err := rows.Err(); err != nil {
+			log.Printf("Error in rows iteration: %v", err)
+		}
+	}
 
-	json.NewEncoder(w).Encode(Response{Message: "Booking cancelled successfully", Success: true})
+	json.NewEncoder(w).Encode(Response{
+		Message: "Booking cancelled successfully",
+		Success: true,
+	})
+}
+
+func SmsBookingCancellationInform(username, servicename, start_time, end_time, phoneNumber string) error {
+	message := fmt.Sprintf(
+		"Hi %s! Your booking for %s (slot: %s-%s) has been CANCELLED. "+
+			"Contact us for assistance.",
+		username, servicename, start_time, end_time,
+	)
+
+	payload := types.SmsPayload{
+		SenderID: 55,
+		Schedule: "none",
+		Sms:      message,
+		Recipients: []types.SmsReceiver{{
+			Number: phoneNumber,
+		}},
+	}
+	return utils.SendSms(payload)
+}
+
+func SmsSlotAvailableInform(username, servicename, phoneNumber string) error {
+	message := fmt.Sprintf(
+		"Hi %s! A time slot has become available for %s today. "+
+			"If you'd like to change your appointment to an earlier time, "+
+			"please visit our app now.",
+		username, servicename,
+	)
+
+	payload := types.SmsPayload{
+		SenderID: 55,
+		Schedule: "none",
+		Sms:      message,
+		Recipients: []types.SmsReceiver{{
+			Number: phoneNumber,
+		}},
+	}
+	return utils.SendSms(payload)
 }
 
 func SendCancellationNotifications(bookingDate, startTime, endTime string, serviceID, doctorID int) {
