@@ -483,7 +483,12 @@ func TriggerExpoPushNotifications() {
 	ManualTriggerNotifications()
 }
 func CancelBooking(w http.ResponseWriter, r *http.Request) {
+	const StatusCancelled = "cancelled"
+
+	fmt.Println("CancelBooking: received request")
+
 	if r.Method != http.MethodPost {
+		fmt.Println("CancelBooking: invalid method")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(Response{Message: "Invalid method", Success: false})
 		return
@@ -491,59 +496,67 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 
 	claims, ok := r.Context().Value("user").(*middleware.CustomClaims)
 	if !ok {
+		fmt.Println("CancelBooking: unauthorized - no user claims")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Response{Message: "Unauthorized", Success: false})
 		return
 	}
+	fmt.Printf("CancelBooking: user ID from claims: %s\n", claims.ID)
 
 	var req struct {
 		BookingID int `json:"booking_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		fmt.Println("CancelBooking: invalid request body")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{Message: "Invalid payload", Success: false})
 		return
 	}
+	fmt.Printf("CancelBooking: booking ID to cancel: %d\n", req.BookingID)
 
-	var userID string
-	var status string
-	var bookingDate string
-	var startTime string
-	var endTime string
-	var serviceID int
-	var doctorID int
+	var userID, status, bookingDate, startTime, endTime string
+	var serviceID, doctorID int
+
 	err := handlerconn.Db.QueryRow(`
 		SELECT user_id, status, booking_date, start_time, end_time, service_id, doctor_id 
 		FROM bookingtrack_tb WHERE id = $1`, req.BookingID).Scan(&userID, &status, &bookingDate, &startTime, &endTime, &serviceID, &doctorID)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			fmt.Println("CancelBooking: booking not found")
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(Response{Message: "Booking not found", Success: false})
 			return
 		}
+		fmt.Printf("CancelBooking: DB error: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Database error", Success: false})
 		return
 	}
 
+	fmt.Printf("CancelBooking: booking found, status: %s, userID: %s\n", status, userID)
+
 	if userID != claims.ID {
+		fmt.Println("CancelBooking: forbidden - user mismatch")
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(Response{Message: "You are not allowed to cancel this booking", Success: false})
 		return
 	}
 
-	if status == "cancelled" {
+	if status == StatusCancelled {
+		fmt.Println("CancelBooking: already cancelled")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{Message: "Booking is already cancelled", Success: false})
 		return
 	}
 
-	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = 'cancelled' WHERE id = $1`, req.BookingID)
+	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = $1 WHERE id = $2`, StatusCancelled, req.BookingID)
 	if err != nil {
+		fmt.Printf("CancelBooking: failed to update booking status: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to cancel booking", Success: false})
 		return
 	}
+	fmt.Println("CancelBooking: booking marked as cancelled")
 
 	extractTime := func(t string) string {
 		parsed, err := time.Parse(time.RFC3339, t)
@@ -551,10 +564,7 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 			return parsed.Format("15:04")
 		}
 		if len(t) >= 5 && t[2] == ':' {
-			if len(t) > 5 {
-				return t[:5]
-			}
-			return t
+			return t[:5]
 		}
 		return t
 	}
@@ -562,78 +572,78 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 	// Get service name
 	var serviceName string
 	err = handlerconn.Db.QueryRow(`
-		SELECT servicename 
-		FROM serviceavailable 
-		WHERE serv_id = $1`, 
-		serviceID).Scan(&serviceName)
+		SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
 	if err != nil {
+		fmt.Printf("CancelBooking: failed to get service name: %v\n", err)
 		serviceName = "Medical Service"
 	}
+	fmt.Printf("CancelBooking: service name: %s\n", serviceName)
 
-	// Send cancellation SMS to cancelling user
+	// Notify cancelling user
 	var username, phone string
 	err = handlerconn.Db.QueryRow(`
-		SELECT fullname, dial 
-		FROM users 
-		WHERE user_id = $1`, 
-		userID).Scan(&username, &phone)
+		SELECT fullname, dial FROM users WHERE user_id = $1`, userID).Scan(&username, &phone)
 	if err == nil {
+		fmt.Printf("CancelBooking: found user %s with phone %s\n", username, phone)
 		startTimeOnly := extractTime(startTime)
 		endTimeOnly := extractTime(endTime)
 		cleanPhone := strings.Replace(phone, "+", "", -1)
-		
+
 		err = smsendpoint.SmsBookingCancellationInform(username, serviceName, startTimeOnly, endTimeOnly, cleanPhone)
 		if err != nil {
-			log.Printf("Failed to send cancellation SMS: %v", err)
+			fmt.Printf("CancelBooking: failed to send cancellation SMS: %v\n", err)
+		} else {
+			fmt.Println("CancelBooking: cancellation SMS sent successfully")
 		}
 	} else {
-		log.Printf("Error fetching cancelling user details: %v", err)
+		fmt.Printf("CancelBooking: failed to fetch user details for SMS: %v\n", err)
 	}
 
+	// Notify other users
+	now := time.Now()
+	fmt.Printf("CancelBooking: current time for comparison: %s\n", now.Format("15:04:05"))
 
-	currentTime := time.Now().Format("15:04")
-
-	// Find all users with bookings for the same service on the same day (excluding cancelled user)
 	rows, err := handlerconn.Db.Query(`
 		SELECT DISTINCT u.fullname, u.dial 
 		FROM bookingtrack_tb b
 		JOIN users u ON b.user_id = u.user_id
 		WHERE b.booking_date = $1 
 		AND b.service_id = $2 
-		AND b.status != 'cancelled'
-		AND b.user_id != $3
-		AND b.start_time::time >= $4::time`,
-		bookingDate, serviceID, userID, currentTime)
-	
+		AND b.status != $3
+		AND b.user_id != $4
+		AND (b.booking_date::date > $1::date OR (b.booking_date = $1 AND b.start_time::time >= $5::time))`,
+		bookingDate, serviceID, StatusCancelled, userID, now.Format("15:04:05"))
+
 	if err != nil {
-		log.Printf("Error querying affected bookings: %v", err)
+		fmt.Printf("CancelBooking: error querying other users: %v\n", err)
 	} else {
 		defer rows.Close()
-		
 		for rows.Next() {
 			var otherUsername, otherPhone string
 			if err := rows.Scan(&otherUsername, &otherPhone); err != nil {
-				log.Printf("Error scanning user: %v", err)
+				fmt.Printf("CancelBooking: error scanning other user: %v\n", err)
 				continue
 			}
-			
 			cleanPhone := strings.Replace(otherPhone, "+", "", -1)
 			err = smsendpoint.SmsSlotAvailableInform(otherUsername, serviceName, cleanPhone)
 			if err != nil {
-				log.Printf("Failed to send availability SMS to %s: %v", cleanPhone, err)
+				fmt.Printf("CancelBooking: failed to send available slot SMS to %s: %v\n", cleanPhone, err)
+			} else {
+				fmt.Printf("CancelBooking: notified %s of availability\n", cleanPhone)
 			}
 		}
-		
 		if err := rows.Err(); err != nil {
-			log.Printf("Error in rows iteration: %v", err)
+			fmt.Printf("CancelBooking: error after iterating rows: %v\n", err)
 		}
 	}
 
+	fmt.Println("CancelBooking: completed successfully")
 	json.NewEncoder(w).Encode(Response{
 		Message: "Booking cancelled successfully",
 		Success: true,
 	})
 }
+
 
 func SmsBookingCancellationInform(username, servicename, start_time, end_time, phoneNumber string) error {
 	message := fmt.Sprintf(
