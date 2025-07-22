@@ -67,71 +67,49 @@ func Dayofweek(day int) (string, error) {
 	return daysname[day], nil
 }
 func DayOfWeekReverse(day string) (int, error) {
-    switch day {
-    case "Sunday":
-        return 0, nil
-    case "Monday":
-        return 1, nil
-    case "Tuesday":
-        return 2, nil
-    case "Wednesday":
-        return 3, nil
-    case "Thursday":
-        return 4, nil
-    case "Friday":
-        return 5, nil
-    case "Saturday":
-        return 6, nil
-    default:
-        return -1, fmt.Errorf("invalid weekday: %q", day)
-    }
+	switch day {
+	case "Sunday":
+		return 0, nil
+	case "Monday":
+		return 1, nil
+	case "Tuesday":
+		return 2, nil
+	case "Wednesday":
+		return 3, nil
+	case "Thursday":
+		return 4, nil
+	case "Friday":
+		return 5, nil
+	case "Saturday":
+		return 6, nil
+	default:
+		return -1, fmt.Errorf("invalid weekday: %q", day)
+	}
 }
 func DaytimeofToday(dayoftoday string, dayname string) {
 
 }
 
-
 func CheckalreadybookedToday(userid string, date string, tx *sql.Tx) (bool, error) {
+	var exists bool
 	const query = `
-        SELECT user_id, start_time, end_time, dayofweek, spec_id 
-        FROM bookingTrack_tb  
-        WHERE booking_date = $1 AND user_id = $2
-    `
-
-	rows, err := tx.Query(query, date, userid)
+		SELECT EXISTS (
+			SELECT 1
+			FROM bookingTrack_tb
+			WHERE booking_date = $1
+			  AND user_id = $2
+			  AND (spec_id IS NULL OR spec_id = 0)
+			  AND status != 'cancelled'
+		)
+	`
+	err := tx.QueryRow(query, date, userid).Scan(&exists)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
-
 		return false, fmt.Errorf("database query failed: %w", err)
 	}
-
-	defer rows.Close()
-
-	hasNormalBooking := false
-	for rows.Next() {
-		var (
-			user_id    int
-			start_time string
-			end_time   string
-			dayofweek  int
-			spec_id    int
-		)
-
-		if err := rows.Scan(&user_id, &start_time, &end_time, &dayofweek, &spec_id); err != nil {
-			return false, fmt.Errorf("row scan failed: %w", err)
-		}
-
-		if spec_id == 0 {
-			hasNormalBooking = true
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return false, fmt.Errorf("rows iteration error: %w", err)
-	}
-	return hasNormalBooking, nil
+	return exists, nil
 }
 
 func CheckLimit(userID string, client *sql.Tx) (map[int]string, error) {
@@ -180,8 +158,7 @@ func ValidateSecretkey(key string) error {
 			hasUppercase = true
 		case unicode.IsDigit(r):
 			hasNumber = true
-
-		}   
+		}
 	}
 	if !hasUppercase {
 		return errors.New("please make sure your Secretkey having atleast one Uppercase character")
@@ -193,34 +170,34 @@ func ValidateSecretkey(key string) error {
 
 }
 
-func HandleREGprocess(table string,username string, regNo string,password []byte, phone_number string, email string, home_address string, tx *sql.Tx)error{
+func HandleREGprocess(table string, username string, regNo string, password []byte, phone_number string, email string, home_address string, tx *sql.Tx) error {
 	var exist bool
-	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE regNo = $1)",table)
-	errExist :=tx.QueryRow(query,regNo).Scan(&exist)
+	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE regNo = $1)", table)
+	errExist := tx.QueryRow(query, regNo).Scan(&exist)
 	if errExist != nil {
 		return fmt.Errorf("something went wrong")
 	}
-	if exist{
+	if exist {
 		return fmt.Errorf("staff is already registered with this registration number")
 	}
-   _, errExec := tx.Exec(fmt.Sprintf("INSERT INTO %s (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)",table),username,regNo,password,phone_number,email,home_address)
-   if errExec !=nil {
-	return fmt.Errorf("something went wwrong here")
-   }
-  return nil
+	_, errExec := tx.Exec(fmt.Sprintf("INSERT INTO %s (username,regNO,password,phone_number,email,home_address)  VALUES ($1, $2, $3, $4, $5,$6)", table), username, regNo, password, phone_number, email, home_address)
+	if errExec != nil {
+		return fmt.Errorf("something went wwrong here")
+	}
+	return nil
 }
 
-func CheckIdentifiaction(RegNo string)(bool)  {
-    if strings.HasPrefix(RegNo,"MHD/DKT"){
+func CheckIdentifiaction(RegNo string) bool {
+	if strings.HasPrefix(RegNo, "MHD/DKT") {
 		return true
-	}else{
+	} else {
 		return false
 	}
 }
-func Checkpassword(pwrd , cpwrd string)(bool){
-   if pwrd == cpwrd {
-	return true
-   }else{
-	return false
-   }
+func Checkpassword(pwrd, cpwrd string) bool {
+	if pwrd == cpwrd {
+		return true
+	} else {
+		return false
+	}
 }

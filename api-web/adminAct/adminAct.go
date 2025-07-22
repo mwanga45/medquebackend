@@ -117,22 +117,24 @@ type (
 	}
 )
 
-// JWT Claims structure for admin
+
 type AdminClaims struct {
 	AdminID  int    `json:"admin_id"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
+	Email    string `json:"email"`
 	jwt.RegisteredClaims
 }
 
-// Generate JWT token for admin
-func generateAdminToken(adminID int, username, role string) (string, error) {
+
+func generateAdminToken(adminID int, username, role, email string) (string, error) {
 	secretKey := []byte("admin-secret-key-here")
 
 	claims := AdminClaims{
 		AdminID:  adminID,
 		Username: username,
 		Role:     role,
+		Email:    email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // Token expires in 24 hours
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -152,7 +154,6 @@ const (
 	ADMIN_ROLE     = "admin"
 )
 
-// AdminLogin endpoint - hardcoded authentication
 func AdminLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -184,7 +185,6 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check hardcoded credentials
 	if adminLogin.Username != ADMIN_USERNAME || adminLogin.Password != ADMIN_PASSWORD {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(Response{
@@ -194,8 +194,7 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate JWT token
-	token, err := generateAdminToken(ADMIN_ID, ADMIN_USERNAME, ADMIN_ROLE)
+	token, err := generateAdminToken(ADMIN_ID, ADMIN_USERNAME, ADMIN_ROLE, ADMIN_EMAIL)
 	if err != nil {
 		log.Printf("Token generation error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -206,7 +205,6 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prepare admin data
 	adminData := AdminData{
 		AdminID:  ADMIN_ID,
 		Username: ADMIN_USERNAME,
@@ -214,13 +212,11 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		Email:    ADMIN_EMAIL,
 	}
 
-	// Prepare login response
 	loginResponse := AdminLoginResponse{
 		Token: token,
 		Admin: adminData,
 	}
 
-	// Return successful response
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
 		Message: "Admin login successful",
@@ -236,7 +232,6 @@ func AssignNonTimeserv(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	// --- 1) Read & log the raw body (for debugging) ---
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("[AssignNonTimeserv] read body error: %v\n", err)
@@ -245,7 +240,6 @@ func AssignNonTimeserv(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("[AssignNonTimeserv] raw JSON: %s\n", string(body))
 
-	// --- 2) Decode into your struct ---
 	var req ServiceAssignPayload2
 	if err := json.Unmarshal(body, &req); err != nil {
 		log.Printf("[AssignNonTimeserv] JSON decode error: %v\n", err)
