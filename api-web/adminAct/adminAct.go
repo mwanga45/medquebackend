@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
-	// sidefunc_test "medquemod/booking/verification"
 	handlerconn "medquemod/db_conn"
 	"net/http"
 
@@ -55,10 +55,10 @@ type (
 		Data    interface{} `json:"data,omitempty"`
 	}
 	AsdocschedulePayload struct {
-		DoctorID  string `json:"doctorId" validate:"required"`
-		DayOfWeek string `json:"dayOfWeek" validate:"required"`
-		StartTime string `json:"startTime" validate:"required"`
-		EndTime   string `json:"endTime" validate:"required"`
+		DoctorID  string `json:"doctor_id"`
+		DayOfWeek string `json:"day_of_week"`
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
 	}
 	AsdocServ struct {
 		DoctorID  string `json:"docID"`
@@ -77,6 +77,16 @@ type (
 		ServiceID  string `json:"serv_id"`
 		Servname   string `json:"servname"`
 		Doctorname string `json:"doctorname"`
+	}
+	BookingToday struct {
+		UserId      string `json:"userID"`
+		Servicename string `json:"serv_name"`
+		Patientname string `json:"patientname"`
+		Start_time  string `json:"start"`
+		End_time    string `json:"end"`
+		Status      string `json:"status"`
+		DayOfWeek   string `json:"dayofweek"`
+		Service_Id  string
 	}
 
 	// Admin login structures
@@ -359,9 +369,41 @@ func Asdocschedule(w http.ResponseWriter, r *http.Request) {
 	var shereq AsdocschedulePayload
 
 	json.NewDecoder(r.Body).Decode(&shereq)
-	var isExist bool
+	fmt.Printf("Decoded schedule: %+v\n", shereq)
 
-	errcheck := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM doctors WHERE doctor_id = $1)`, shereq.DoctorID).Scan(&isExist)
+	if strings.TrimSpace(shereq.DoctorID) == "" ||
+		strings.TrimSpace(shereq.DayOfWeek) == "" ||
+		strings.TrimSpace(shereq.StartTime) == "" ||
+		strings.TrimSpace(shereq.EndTime) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{
+			Message: "All fields are required and must not be empty",
+			Success: false,
+		})
+		return
+	}
+
+	doctorIDInt, err := strconv.Atoi(shereq.DoctorID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{
+			Message: "DoctorID must be a valid integer",
+			Success: false,
+		})
+		return
+	}
+	dayOfWeekInt, err := strconv.Atoi(shereq.DayOfWeek)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{
+			Message: "DayOfWeek must be a valid integer",
+			Success: false,
+		})
+		return
+	}
+
+	var isExist bool
+	errcheck := handlerconn.Db.QueryRow(`SELECT EXISTS(SELECT 1 FROM doctors WHERE doctor_id = $1)`, doctorIDInt).Scan(&isExist)
 	if errcheck != nil {
 		json.NewEncoder(w).Encode(Response{
 			Message: "Internal serverError",
@@ -377,14 +419,14 @@ func Asdocschedule(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	_, errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time) VALUES($1,$2,$3,$4)`, shereq.DoctorID, shereq.DayOfWeek, shereq.StartTime, shereq.EndTime)
+	_, errexec := handlerconn.Db.Exec(`INSERT INTO doctorshedule (doctor_id, day_of_week, start_time, end_time) VALUES($1,$2,$3,$4)`, doctorIDInt, dayOfWeekInt, shereq.StartTime, shereq.EndTime)
 	if errexec != nil {
+		fmt.Println("SQL Insert Error:", errexec)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
-			Message: "Something went wrong",
+			Message: fmt.Sprintf("Something went wrong: %v", errexec),
 			Success: false,
 		})
-		fmt.Println("something went wrong", errexec)
 		return
 	}
 	json.NewEncoder(w).Encode(Response{
@@ -778,5 +820,57 @@ func GetsevAvailable(w http.ResponseWriter, r *http.Request) {
 		Message: "Successfully returned data",
 		Success: true,
 		Data:    services,
+	})
+}
+func GetbookingToday(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Message: "Invaild payload",
+			Success: false,
+		})
+		return
+	}
+	now := time.Now()
+	year, month, day := now.Date()
+	datestring := fmt.Sprintf("%04d-%02d-%02d", year, month, day)
+
+	query := `SELECT u.fullname, b.start_time, b.end_time, s.servicename, b.status
+		FROM bookingtrack_tb b
+		JOIN users u ON b.user_id = u.user_id
+		JOIN serviceavailable s ON b.service_id = s.serv_id
+		WHERE b.booking_date = $1`
+
+	rows, err := handlerconn.Db.Query(query, datestring)
+	if err != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Internal serverError",
+			Success: false,
+		})
+		return
+	}
+	defer rows.Close()
+
+	var bookings []map[string]interface{}
+	for rows.Next() {
+		var patient, servicename, status string
+		var start_time, end_time string
+		err := rows.Scan(&patient, &start_time, &end_time, &servicename, &status)
+		if err != nil {
+			continue
+		}
+		bookings = append(bookings, map[string]interface{}{
+			"patient":     patient,
+			"start_time":  start_time,
+			"end_time":    end_time,
+			"servicename": servicename,
+			"status":      status,
+		})
+	}
+
+	json.NewEncoder(w).Encode(Response{
+		Message: "Successfully returned today's bookings",
+		Success: true,
+		Data:    bookings,
 	})
 }

@@ -17,14 +17,14 @@ type (
 		SecretKey string `json:"secretKey" validate:"required"`
 	}
 	regRequest struct {
-		FirstName   string `json:"firstName" validate:"required"`
-		SecondName  string `json:"secondName" validate:"required"`
-		SecretKey   string `json:"secretKey" validate:"required"`
+		FirstName   string `json:"firstname" validate:"required"`
+		SecondName  string `json:"secondname" validate:"required"`
+		SecretKey   string `json:"secreteKey" validate:"required"`
 		Dial        string `json:"dial" validate:"required"`
 		Email       string `json:"email" validate:"required"`
 		DeviceId    string `json:"deviceId" validate:"required"`
 		Birthdate   string `json:"birthdate" validate:"required"`
-		HomeAddress string `json:"homeAddress"`
+		HomeAddress string `json:"homeaddress"`
 	}
 	response struct {
 		Success bool   `json:"success"`
@@ -106,6 +106,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid Request payload", http.StatusBadRequest)
+		fmt.Print(err)
 		return
 	}
 
@@ -130,20 +131,21 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	hashedsecretekey, err := bcrypt.GenerateFromPassword([]byte(req.SecretKey), bcrypt.DefaultCost)
 	if err != nil {
 		json.NewEncoder(w).Encode(response{
-			Message: "failed to hashed secrete key",
+			Message: "failed to hash secret key",
 			Success: false,
 		})
 		return
 	}
-	insert_query := "INSERT INTO Users(fullname,Secretekey,dial,email,deviceId,Birthdate,home_address,user_type) VALUES($1,$2,$3,$4,$5,$6,$7,$8)"
+	insert_query := "INSERT INTO Users(fullname, secretekey, dial, email, deviceid, birthdate, home_address, user_type) VALUES($1,$2,$3,$4,$5,$6,$7,$8)"
 
 	_, err = handlerconn.Db.Exec(insert_query, Fullname, hashedsecretekey, req.Dial, req.Email, req.DeviceId, req.Birthdate, req.HomeAddress, "Patient")
 
 	if err != nil {
+		fmt.Println("DB Insert Error:", err) 
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
-	res := response{Success: true, Message: "successfuly registered"}
+	res := response{Success: true, Message: "successfully registered"}
 
 	w.Header().Set("content-type", "application/json")
 	json.NewEncoder(w).Encode(res)

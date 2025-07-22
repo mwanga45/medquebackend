@@ -384,7 +384,7 @@ func UserRecommendation(w http.ResponseWriter, r *http.Request) {
 	m.SetHeader("Subject", "My recommendation")
 	m.SetBody("text/plain", reqsms.Message)
 
-	// Get Gmail app password from environment variable
+
 	gmailPassword := os.Getenv("GMAIL_APP_PASSWORD")
 	if gmailPassword == "" {
 		json.NewEncoder(w).Encode(Response{

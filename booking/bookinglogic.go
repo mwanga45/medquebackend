@@ -326,7 +326,6 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// Fetch all schedule rows first
 	rows, err := tx.Query(`
 		SELECT 
 		  dk.doctor_id,
@@ -374,7 +373,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		rows.Close()
 		return
 	}
-	rows.Close() // Free transaction for reuse
+	rows.Close()
 
 	now := time.Now()
 	allowedDates := make(map[int]string, 4)
@@ -458,6 +457,7 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{Message: "Failed to commit", Success: false})
 		return
 	}
+	fmt.Print(results)
 
 	json.NewEncoder(w).Encode(Response{
 		Message: "Successfully retrieved slots",
@@ -466,14 +466,11 @@ func Bookinglogic(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Use built-in Expo push notification logic
-// This function triggers the built-in notification worker to process and send pending notifications
 func TriggerExpoPushNotifications() {
-	// checkPendingNotifications is defined in notify.go and uses SendNotification
+
 	ManualTriggerNotifications()
 }
 
-// CancelBooking allows a user to cancel their booking by booking ID
 func CancelBooking(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -497,7 +494,6 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if booking exists and belongs to user, and get booking details
 	var userID string
 	var status string
 	var bookingDate string
@@ -530,24 +526,62 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(Response{Message: "Booking is already cancelled", Success: false})
 		return
 	}
-
-	// Update booking status to 'cancelled'
 	_, err = handlerconn.Db.Exec(`UPDATE bookingtrack_tb SET status = 'cancelled' WHERE id = $1`, req.BookingID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{Message: "Failed to cancel booking", Success: false})
 		return
 	}
+	now := time.Now()
+	layout := "15:04:00"
+	current_time := now.Format(layout)
 
-	// Send notifications to all users who have bookings on the same day
-	go sendCancellationNotifications(bookingDate, startTime, endTime, serviceID, doctorID)
+	rows, errError := handlerconn.Db.Query("SELECT user_id FROM bookingtrack_tb WHERE booking_date = $1 AND start_time >= $2", bookingDate, current_time)
+	if errError != nil {
+		json.NewEncoder(w).Encode(Response{
+			Message: "Failed to execute query",
+			Success: false,
+		})
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			log.Printf("Error scanning user ID: %v", err)
+			continue
+		}
+
+		// Fetch user's fullname and phone
+		var username, phone string
+		err := handlerconn.Db.QueryRow("SELECT fullname, dial FROM users WHERE user_id = $1", userID).Scan(&username, &phone)
+		if err != nil {
+			log.Printf("Error fetching user info for user %s: %v", userID, err)
+			continue
+		}
+
+		var serviceName string
+		err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
+		if err != nil {
+			log.Printf("Error fetching service name for serviceID %d: %v", serviceID, err)
+			serviceName = "Medical Service"
+		}
+
+
+		err = smsendpoint.SmsBookingCancellationInform(username, serviceName, startTime, endTime, phone)
+		if err != nil {
+			log.Printf("Error sending cancellation SMS to %s: %v", phone, err)
+		}
+	}
+
+
+	
 
 	json.NewEncoder(w).Encode(Response{Message: "Booking cancelled successfully", Success: true})
 }
 
-// sendCancellationNotifications sends notifications to all users who have bookings on the same day
-func sendCancellationNotifications(bookingDate, startTime, endTime string, serviceID, doctorID int) {
-	// Get all users who have bookings on the same day (excluding the cancelled booking)
+func SendCancellationNotifications(bookingDate, startTime, endTime string, serviceID, doctorID int) {
+
 	query := `
 		SELECT DISTINCT u.fullname, u.deviceid, u.user_id
 		FROM users u
@@ -565,7 +599,6 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 	}
 	defer rows.Close()
 
-	// Get service name for the notification
 	var serviceName string
 	err = handlerconn.Db.QueryRow(`SELECT servicename FROM serviceavailable WHERE serv_id = $1`, serviceID).Scan(&serviceName)
 	if err != nil {
@@ -573,7 +606,6 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		serviceName = "Medical Service"
 	}
 
-	// Get doctor name for the notification
 	var doctorName string
 	err = handlerconn.Db.QueryRow(`SELECT doctorname FROM doctors WHERE doctor_id = $1`, doctorID).Scan(&doctorName)
 	if err != nil {
@@ -581,7 +613,6 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		doctorName = "Doctor"
 	}
 
-	// Format the time for display
 	startTimeDisplay := startTime
 	if len(startTime) > 5 {
 		startTimeDisplay = startTime[:5]
@@ -591,7 +622,6 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 		endTimeDisplay = endTime[:5]
 	}
 
-	// Send notifications to each user
 	for rows.Next() {
 		var fullname, deviceid string
 		var userID int
@@ -600,7 +630,6 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 			continue
 		}
 
-		// Skip if device ID is not a valid Expo token
 		if !isValidExpoToken(deviceid) {
 			log.Printf("Invalid Expo token for user %s: %s", fullname, deviceid)
 			continue
@@ -626,4 +655,31 @@ func sendCancellationNotifications(bookingDate, startTime, endTime string, servi
 	if err = rows.Err(); err != nil {
 		log.Printf("Error iterating through users: %v", err)
 	}
+}
+
+// TestPushNotification - for manual testing
+func TestPushNotification(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		DeviceID string `json:"deviceId"`
+	}
+	var req request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+	msg := ExpoMessage{
+		To:    req.DeviceID,
+		Title: "Test Notification",
+		Body:  "This is a test push notification!",
+		Sound: "default",
+	}
+	err := SendNotification(msg)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "sent"})
 }

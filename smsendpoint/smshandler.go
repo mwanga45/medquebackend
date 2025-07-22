@@ -8,12 +8,11 @@ import (
 )
 
 func SmsEndpoint(username, phone, startAt, endAt string) error {
-
 	if username == "" || phone == "" || startAt == "" || endAt == "" {
 		return fmt.Errorf("all parameters (username, phone, startAt, endAt) must be provided")
 	}
 
-	// Ensure the SMS API key is set
+
 	apiKey := os.Getenv("SMS_APIKEY")
 	if apiKey == "" {
 		return fmt.Errorf("SMS_APIKEY environment variable is not set")
@@ -34,6 +33,28 @@ func SmsEndpoint(username, phone, startAt, endAt string) error {
 	if err != nil {
 		return fmt.Errorf("failed to send SMS: %w", err)
 	}
-
 	return nil
+}
+func SmsBookingCancellationInform ( username string, servicename string,start_time string,end_time string, phoneNumber string) error{
+	message := fmt.Sprintf(
+		"Hi %s!  Your booking for %s is confirmed from %s to %s. "+
+		"If you’d like to change your time slot, please do it now while spots are still available. "+
+		"Thank you!",
+		username, servicename, start_time, end_time,
+	)
+	
+    Payload := types.SmsPayload{
+		SenderID:55 ,
+		Schedule: "none",
+		Sms: message,
+		Recipients: []types.SmsReceiver{{
+			Number: phoneNumber,
+		}},
+		
+	}
+ err := utils.SendSms(Payload)
+ if err != nil{
+ return	fmt.Errorf("failed to send SMS: %w", err)
+ }
+ return nil
 }
