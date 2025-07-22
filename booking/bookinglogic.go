@@ -602,6 +602,8 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 	// Notify other users
 	now := time.Now()
 	fmt.Printf("CancelBooking: current time for comparison: %s\n", now.Format("15:04:05"))
+	currentTime := now.Format("15:04:05")
+
 
 	rows, err := handlerconn.Db.Query(`
 		SELECT DISTINCT u.fullname, u.dial 
@@ -612,12 +614,13 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 		AND b.status != $3
 		AND b.user_id != $4
 		AND (b.booking_date::date > $1::date OR (b.booking_date = $1 AND b.start_time::time >= $5::time))`,
-		bookingDate, serviceID, StatusCancelled, userID, now.Format("15:04:05"))
+		bookingDate, serviceID, StatusCancelled, userID, currentTime)
 
 	if err != nil {
 		fmt.Printf("CancelBooking: error querying other users: %v\n", err)
 	} else {
 		defer rows.Close()
+		fmt.Print("CancelBooking: notifying other users about available slot for %s\n", rows)
 		for rows.Next() {
 			var otherUsername, otherPhone string
 			if err := rows.Scan(&otherUsername, &otherPhone); err != nil {
@@ -625,6 +628,7 @@ func CancelBooking(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			cleanPhone := strings.Replace(otherPhone, "+", "", -1)
+			fmt.Printf("CancelBooking: notifying %s at %s\n", otherUsername, cleanPhone)
 			err = smsendpoint.SmsSlotAvailableInform(otherUsername, serviceName, cleanPhone)
 			if err != nil {
 				fmt.Printf("CancelBooking: failed to send available slot SMS to %s: %v\n", cleanPhone, err)
