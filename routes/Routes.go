@@ -7,6 +7,7 @@ import (
 	docact "medquemod/api-web/docAct"
 	"medquemod/booking"
 	handler_chat "medquemod/chatbot"
+	middlewares "medquemod/docmiddleware"
 	authentic "medquemod/handleauthentic"
 	"medquemod/middleware"
 	"medquemod/profile"
@@ -26,7 +27,6 @@ func HandleRoutes(r *mux.Router) {
 	shedule := r.PathPrefix("/info").Subrouter()
 	shedule.HandleFunc("/docAv", api.DoctorsAvailability).Methods("GET")
 
-
 	bookingRoutes := r.PathPrefix("/booking").Subrouter()
 	bookingRoutes.Use(middleware.VerifyTokenMiddleware)
 
@@ -34,7 +34,6 @@ func HandleRoutes(r *mux.Router) {
 	bookingRoutes.HandleFunc("/serviceslot", booking.Bookinglogic).Methods("POST")
 	bookingRoutes.HandleFunc("/bookingreq", booking.Bookingpayload).Methods("POST")
 	bookingRoutes.HandleFunc("/cancelbooking", booking.CancelBooking).Methods("POST")
-
 
 	Adm := r.PathPrefix("/admin").Subrouter()
 	Adm.HandleFunc("/registerserv", adminact.AssignService).Methods("POST")
@@ -52,6 +51,11 @@ func HandleRoutes(r *mux.Router) {
 
 	dkt := r.PathPrefix("/dkt").Subrouter()
 	dkt.HandleFunc("/register", docact.Registration).Methods("POST")
+	dkt.Use(middlewares.DoctorOnly)
+	dkt.HandleFunc("/api/doctor/appointments/today", docact.GetDoctorAppointments).Methods("GET")
+	dkt.HandleFunc("/api/doctor/appointments/status", docact.UpdateAppointmentStatus).Methods("PUT")
+	dkt.HandleFunc("/api/doctor/patients/search", docact.SearchPatients).Methods("GET")
+	dkt.HandleFunc("/api/doctor/profile", docact.GetDoctorProfile).Methods("GET")
 
 	userAct := r.PathPrefix("/user").Subrouter()
 	userAct.Use(middleware.VerifyTokenMiddleware)

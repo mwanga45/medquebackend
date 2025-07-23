@@ -19,6 +19,22 @@ type (
 		Success bool   `json:"success"`
 		Data    interface{}
 	}
+	
+	Appointment struct {
+		ID        int       `json:"id"`
+		Username  string    `json:"username"`
+		StartTime string    `json:"start_time"`
+		EndTime   string    `json:"end_time"`
+		Status    string    `json:"status"`
+	}
+	
+	Patient struct {
+		ID       int    `json:"id"`
+		Username string `json:"username"`
+		Phone    string `json:"phone"`
+		Email    string `json:"email"`
+	}
+	
 	StaffRegister struct {
 		Doctorname  string `json:"username" validate:"required"`
 		RegNo       string `json:"regNo" validate:"required"`
@@ -28,11 +44,13 @@ type (
 		Phone       string `json:"phone" validate:"required"`
 		Email       string `json:"email" validate:"required"`
 	}
+	
 	Stafflogin struct {
 		RegNo    string `json:"regNo" validate:"required"`
 		Password string `json:"password" validate:"required"`
 		Username string `json:"username" validate:"required"`
 	}
+	
 	DoctorData struct {
 		DoctorID       int    `json:"doctor_id"`
 		DoctorName     string `json:"doctorname"`
@@ -42,6 +60,7 @@ type (
 		Identification string `json:"identification"`
 		Role           string `json:"role"`
 	}
+	
 	LoginResponse struct {
 		Token  string     `json:"token"`
 		Doctor DoctorData `json:"doctor"`
@@ -171,6 +190,7 @@ func DoctLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("Token %s logged in successfully\n", token)
 
 	loginResponse := LoginResponse{
 		Token:  token,
@@ -299,4 +319,217 @@ func Registration(w http.ResponseWriter, r *http.Request) {
 		Message: "successfuly registered",
 		Success: true,
 	})
+}
+func GetDoctorAppointments(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Stage 1: Enter GetDoctorAppointments")
+    w.Header().Set("Content-Type", "application/json")
+
+    // Stage 2: Extract JWT claims
+    fmt.Println("Stage 2: Extracting JWT claims")
+    claims, ok := r.Context().Value("claims").(jwt.MapClaims)
+    if !ok {
+        fmt.Println("Stage 2 Error: Unauthorized – no claims")
+        w.WriteHeader(http.StatusUnauthorized)
+        json.NewEncoder(w).Encode(Response{Message: "Unauthorized", Success: false})
+        return
+    }
+    fmt.Printf("Stage 2: Claims found: %v\n", claims)
+
+    // Stage 3: Parse doctor_id
+    doctorID := int(claims["doctor_id"].(float64))
+    fmt.Printf("Stage 3: doctorID = %d\n", doctorID)
+
+    // Stage 4: Get today's date
+    today := time.Now().Format("2006-01-02")
+    fmt.Printf("Stage 4: today = %s\n", today)
+
+    // Stage 5: Perform DB query
+    fmt.Println("Stage 5: Querying appointments from DB")
+    rows, err := handlerconn.Db.Query(`
+        SELECT bt.id, u.fullname as username, bt.start_time, bt.end_time, bt.status 
+        FROM bookingtrack_tb bt
+        JOIN users u ON bt.user_id = u.user_id
+        WHERE bt.doctor_id = $1 AND bt.booking_date = $2
+        ORDER BY bt.start_time
+    `, doctorID, today)
+    if err != nil {
+        fmt.Printf("Stage 5 Error: DB query error: %v\n", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{Message: "Failed to fetch appointments", Success: false})
+        return
+    }
+    defer rows.Close()
+    fmt.Println("Stage 5: Query succeeded, iterating rows")
+
+    // Stage 6: Scan rows
+    var appointments []Appointment
+    for rows.Next() {
+        var apt Appointment
+        fmt.Println("Stage 6: Scanning next row")
+        if err := rows.Scan(&apt.ID, &apt.Username, &apt.StartTime, &apt.EndTime, &apt.Status); err != nil {
+            fmt.Printf("Stage 6 Error: Row scan error: %v\n", err)
+            continue
+        }
+        fmt.Printf("Stage 6: Scanned appointment: %+v\n", apt)
+        appointments = append(appointments, apt)
+    }
+
+    // Stage 7: Write response
+    fmt.Println("Stage 7: Encoding response JSON")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(Response{Message: "Successfully fetched appointments", Success: true, Data: appointments})
+    fmt.Println("Stage 7: Done GetDoctorAppointments")
+}
+
+// UpdateAppointmentStatus updates the status of an appointment
+func UpdateAppointmentStatus(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Stage 1: Enter UpdateAppointmentStatus")
+    w.Header().Set("Content-Type", "application/json")
+
+    var updateData struct {
+        AppointmentID int    `json:"appointment_id"`
+        Status        string `json:"status"`
+    }
+
+    // Stage 2: Decode body
+    fmt.Println("Stage 2: Decoding request body")
+    if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
+        fmt.Printf("Stage 2 Error: Invalid JSON body: %v\n", err)
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(Response{Message: "Invalid request body", Success: false})
+        return
+    }
+    fmt.Printf("Stage 2: updateData = %+v\n", updateData)
+
+    // Stage 3: Extract JWT claims
+    fmt.Println("Stage 3: Extracting JWT claims")
+    claims, ok := r.Context().Value("claims").(jwt.MapClaims)
+    if !ok {
+        fmt.Println("Stage 3 Error: Unauthorized – no claims")
+        w.WriteHeader(http.StatusUnauthorized)
+        json.NewEncoder(w).Encode(Response{Message: "Unauthorized", Success: false})
+        return
+    }
+    docID := int(claims["doctor_id"].(float64))
+    fmt.Printf("Stage 3: doctorID = %d\n", docID)
+
+    // Stage 4: Execute update
+    fmt.Println("Stage 4: Executing DB update")
+    _, err := handlerconn.Db.Exec(`
+        UPDATE bookingtrack_tb 
+        SET status = $1
+        WHERE id = $2 AND doctor_id = $3
+    `, updateData.Status, updateData.AppointmentID, docID)
+    if err != nil {
+        fmt.Printf("Stage 4 Error: DB update error: %v\n", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{Message: "Failed to update appointment status", Success: false})
+        return
+    }
+
+    // Stage 5: Write response
+    fmt.Println("Stage 5: Encoding response JSON")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(Response{Message: "Successfully updated appointment status", Success: true})
+    fmt.Println("Stage 5: Done UpdateAppointmentStatus")
+}
+
+// SearchPatients searches for patients by name
+func SearchPatients(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Stage 1: Enter SearchPatients")
+    w.Header().Set("Content-Type", "application/json")
+
+    // Stage 2: Get query param
+    query := r.URL.Query().Get("q")
+    fmt.Printf("Stage 2: query = '%s'\n", query)
+    if query == "" {
+        fmt.Println("Stage 2 Error: Empty search query")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(Response{Message: "Search query is required", Success: false})
+        return
+    }
+
+    // Stage 3: Perform DB query
+    fmt.Println("Stage 3: Querying patients from DB")
+    rows, err := handlerconn.Db.Query(`
+        SELECT user_id, fullname, dial, email 
+        FROM users 
+        WHERE user_type = 'Patient' AND (fullname ILIKE $1 OR dial ILIKE $1)
+        LIMIT 10
+    `, "%"+query+"%")
+    if err != nil {
+        fmt.Printf("Stage 3 Error: DB query error: %v\n", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{Message: "Failed to search patients", Success: false})
+        return
+    }
+    defer rows.Close()
+    fmt.Println("Stage 3: Query succeeded, iterating patient rows")
+
+    // Stage 4: Scan rows
+    var patients []Patient
+    for rows.Next() {
+        var patient Patient
+        fmt.Println("Stage 4: Scanning next patient row")
+        if err := rows.Scan(&patient.ID, &patient.Username, &patient.Phone, &patient.Email); err != nil {
+            fmt.Printf("Stage 4 Error: Row scan error: %v\n", err)
+            continue
+        }
+        fmt.Printf("Stage 4: Scanned patient: %+v\n", patient)
+        patients = append(patients, patient)
+    }
+
+    // Stage 5: Write response
+    fmt.Println("Stage 5: Encoding response JSON")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(Response{Message: "Successfully searched patients", Success: true, Data: patients})
+    fmt.Println("Stage 5: Done SearchPatients")
+}
+
+// GetDoctorProfile returns doctor's profile information
+func GetDoctorProfile(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Stage 1: Enter GetDoctorProfile")
+    w.Header().Set("Content-Type", "application/json")
+
+    // Stage 2: Extract JWT claims
+    fmt.Println("Stage 2: Extracting JWT claims")
+    claims, ok := r.Context().Value("claims").(jwt.MapClaims)
+    if !ok {
+        fmt.Println("Stage 2 Error: Unauthorized – no claims")
+        w.WriteHeader(http.StatusUnauthorized)
+        json.NewEncoder(w).Encode(Response{Message: "Unauthorized", Success: false})
+        return
+    }
+    doctorID := int(claims["doctor_id"].(float64))
+    fmt.Printf("Stage 2: doctorID = %d\n", doctorID)
+
+    // Stage 3: Query profile
+    fmt.Println("Stage 3: Querying doctor profile from DB")
+    var doctorData DoctorData
+    err := handlerconn.Db.QueryRow(`
+        SELECT doctor_id, doctorname, email, specialist_name, phone, identification, role 
+        FROM doctors 
+        WHERE doctor_id = $1
+    `, doctorID).Scan(
+        &doctorData.DoctorID,
+        &doctorData.DoctorName,
+        &doctorData.Email,
+        &doctorData.SpecialistName,
+        &doctorData.Phone,
+        &doctorData.Identification,
+        &doctorData.Role,
+    )
+    if err != nil {
+        fmt.Printf("Stage 3 Error: DB query error: %v\n", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(Response{Message: "Failed to fetch doctor profile", Success: false})
+        return
+    }
+    fmt.Printf("Stage 3: doctorData = %+v\n", doctorData)
+
+    // Stage 4: Write response
+    fmt.Println("Stage 4: Encoding response JSON")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(Response{Message: "Successfully fetched doctor profile", Success: true, Data: doctorData})
+    fmt.Println("Stage 4: Done GetDoctorProfile")
 }
